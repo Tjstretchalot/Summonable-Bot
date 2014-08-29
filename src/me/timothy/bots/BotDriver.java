@@ -194,7 +194,7 @@ public class BotDriver implements Runnable {
 				String ids = "";
 				boolean first = true;
 				for(int i = 0; i < messages.numChildren(); i++) {
-					Message m = (Message) messages.getChild(i);
+					Thing m = messages.getChild(i);
 					if(!first)
 						ids += ",";
 					else
