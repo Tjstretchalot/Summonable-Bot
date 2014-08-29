@@ -5,16 +5,15 @@ import java.text.ParseException;
 import java.util.List;
 
 import me.timothy.bots.summon.Summon;
+import me.timothy.jreddit.info.Comment;
+import me.timothy.jreddit.info.Link;
+import me.timothy.jreddit.info.Listing;
+import me.timothy.jreddit.info.Message;
+import me.timothy.jreddit.info.Thing;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.github.jreddit.Replyable;
-import com.github.jreddit.comment.Comment;
-import com.github.jreddit.message.Message;
-import com.github.jreddit.submissions.Submission;
-import com.github.jreddit.utils.restclient.RestClient;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -43,9 +42,6 @@ public class BotDriver implements Runnable {
 	/** The database. */
 	private Database database;
 	
-	/** The rest client. */
-	private RestClient restClient;
-	
 	/** The bot. */
 	private Bot bot;
 
@@ -65,7 +61,7 @@ public class BotDriver implements Runnable {
 	 * @param submissionSummons the submission summons
 	 */
 	public BotDriver(Database database, FileConfiguration config,
-			RestClient restClient, Bot bot, Summon[] commentSummons,
+			Bot bot, Summon[] commentSummons,
 			Summon[] pmSummons, Summon[] submissionSummons) {
 		this.commentSummons = commentSummons;
 		this.submissionSummons = submissionSummons;
@@ -73,7 +69,6 @@ public class BotDriver implements Runnable {
 		
 		this.database = database;
 		this.config = config;
-		this.restClient = restClient;
 		this.bot = bot;
 
 		this.logger = LogManager.getLogger();
@@ -114,16 +109,17 @@ public class BotDriver implements Runnable {
 	 * summons.
 	 */
 	private void scanComments() {
-		List<Comment> comments = getRecentComments();
+		Listing comments = getRecentComments();
 		sleepFor(2000);
 
-		for (Comment comment : comments) {
-			if(database.containsFullname(comment.getFullname()) || config.getBannedUsers().contains(comment.getAuthor().toLowerCase()))
+		for (int i = 0; i < comments.numChildren(); i++) {
+			Comment comment = (Comment) comments.getChild(i);
+			if(database.containsFullname(comment.fullname()) || config.getBannedUsers().contains(comment.author().toLowerCase()))
 				continue;
 			
 			for(Summon summon : commentSummons) {
 				if(summon.parse(comment)) {
-					database.addFullname(comment.getFullname());
+					database.addFullname(comment.fullname());
 					String response = summon.applyChanges(config, database);
 					handleReply(comment, response);
 					sleepFor(2000);
@@ -143,16 +139,17 @@ public class BotDriver implements Runnable {
 	 * @throws ParseException if the parse via Summon.CHECK_SUMMON is invalid (should not happen since the check is automatic)
 	 */
 	private void scanSubmissions() throws IOException, org.json.simple.parser.ParseException, ParseException {
-		List<Submission> submissions = getRecentSubmissions();
+		Listing submissions = getRecentSubmissions();
 		sleepFor(2000);
-		
-		for (Submission submission : submissions) {
-			if(database.containsFullname(submission.getFullName()))
+
+		for (int i = 0; i < submissions.numChildren(); i++) {
+			Link submission = (Link) submissions.getChild(i);
+			if(database.containsFullname(submission.fullname()))
 				continue;
 			
 			for(Summon summon : submissionSummons) {
 				if(summon.parse(submission)) {
-					database.addFullname(submission.getFullName());
+					database.addFullname(submission.fullname());
 					String response = summon.applyChanges(config, database);
 					
 					handleReply(submission, response);
@@ -167,13 +164,14 @@ public class BotDriver implements Runnable {
 	 * and if they are, applies them.
 	 */
 	private void scanPersonalMessages() {
-		List<Message> messages = getRecentMessages();
+		Listing messages = getRecentMessages();
 		markRead(messages);
-		for(Message mess : messages) {
-			if(mess.isComment()) {
-				logger.info(mess.getAuthor() + " replied to me with:\n" + mess.getBody());
+		for(int i = 0; i < messages.numChildren(); i++) {
+			Message mess = (Message) messages.getChild(i);
+			if(mess.wasComment()) {
+				logger.info(mess.author() + " replied to me with:\n" + mess.body());
 			}else {
-				logger.info(mess.getAuthor() + " pm'd me:\n" + mess.getBody());
+				logger.info(mess.author() + " pm'd me:\n" + mess.body());
 				
 				for(Summon summon : pmSummons) {
 					if(summon.parse(mess)) {
@@ -190,31 +188,28 @@ public class BotDriver implements Runnable {
 	 * @param messages the messages
 	 * @see me.timothy.bots.Retryable
 	 */
-	private void markRead(final List<Message> messages) {
+	private void markRead(final Listing messages) {
 		new Retryable<Boolean>("markRead") {
 
 			@Override
 			protected Boolean runImpl() {
 				String ids = "";
 				boolean first = true;
-				for(Message m : messages) {
+				for(int i = 0; i < messages.numChildren(); i++) {
+					Message m = (Message) messages.getChild(i);
 					if(!first)
 						ids += ",";
 					else
 						first = false;
-					ids += m.getFullName();
+					ids += m.fullname();
 				}
+				boolean succ = false;
 				if(ids.length() != 0) {
 					logger.debug("Marking " + ids + " as read");
-					try {
-						bot.setReadMessage(ids);
-					} catch (IOException e) {
-						logger.debug(e);
-						return null;
-					}
+					succ = bot.setReadMessage(ids);
 					sleepFor(2000);
 				}
-				return true;
+				return succ;
 			}
 			
 		}.run();
@@ -238,10 +233,10 @@ public class BotDriver implements Runnable {
 	 * @return recent comments
 	 * @see me.timothy.bots.Retryable
 	 */
-	private List<Comment> getRecentComments() {
-		return new Retryable<List<Comment>>("getRecentComments") {
+	private Listing getRecentComments() {
+		return new Retryable<Listing>("getRecentComments") {
 			@Override
-			protected List<Comment> runImpl() {
+			protected Listing runImpl() {
 				return bot.getRecentComments();
 			}
 		}.run();
@@ -254,18 +249,12 @@ public class BotDriver implements Runnable {
 	 * @param response the thing to reply with
 	 * @see me.timothy.bots.Retryable
 	 */
-	private void handleReply(final Replyable replyable, final String response) {
+	private void handleReply(final Thing replyable, final String response) {
 		new Retryable<Boolean>("handleReply") {
 
 			@Override
 			protected Boolean runImpl() {
-				try {
-					replyable.respondTo(restClient, bot.getUser(), response);
-					return true;
-				} catch (IOException e) {
-					logger.debug(e);
-					return null;
-				}
+				return bot.respondTo(replyable, response);
 			}
 			
 		}.run();
@@ -277,10 +266,10 @@ public class BotDriver implements Runnable {
 	 * @return a list of recent submissions
 	 * @see me.timothy.bots.Retryable
 	 */
-	private List<Submission> getRecentSubmissions() {
-		return new Retryable<List<Submission>>("getRecentSubmissions") {
+	private Listing getRecentSubmissions() {
+		return new Retryable<Listing>("getRecentSubmissions") {
 			@Override
-			protected List<Submission> runImpl() {
+			protected Listing runImpl() {
 				return bot.getRecentSubmissions();
 			}
 		}.run();
@@ -292,10 +281,10 @@ public class BotDriver implements Runnable {
 	 * @return a list of recent messages
 	 * @see me.timothy.bots.Retryable
 	 */
-	private List<Message> getRecentMessages() {
-		return new Retryable<List<Message>>("getRecentMessages") {
+	private Listing getRecentMessages() {
+		return new Retryable<Listing>("getRecentMessages") {
 			@Override
-			protected List<Message> runImpl() {
+			protected Listing runImpl() {
 				return bot.getUnreadMessages();
 			}
 		}.run();

@@ -5,6 +5,7 @@ import java.io.IOException;
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.SortType;
 import me.timothy.jreddit.User;
+import me.timothy.jreddit.info.CommentResponse;
 import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.Thing;
 
@@ -139,7 +140,10 @@ public class Bot {
 			throw new IllegalStateException("null user");
 		}
 		try {
-			RedditUtils.comment(user, replyable.fullname(), message);
+			CommentResponse resp = RedditUtils.comment(user, replyable.fullname(), message);
+			if(resp.getErrors().size() > 0)
+				return false;
+			
 			return true;
 		} catch (IOException | ParseException e) {
 			lastError = e;
