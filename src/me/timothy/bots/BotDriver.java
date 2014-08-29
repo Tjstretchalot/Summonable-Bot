@@ -165,10 +165,12 @@ public class BotDriver implements Runnable {
 		Listing messages = getRecentMessages();
 		markRead(messages);
 		for(int i = 0; i < messages.numChildren(); i++) {
-			Message mess = (Message) messages.getChild(i);
-			if(mess.wasComment()) {
+			Thing m = (Thing) messages.getChild(i);
+			if(m instanceof Comment) {
+				Comment mess = (Comment) m;
 				logger.info(mess.author() + " replied to me with:\n" + mess.body());
-			}else {
+			}else if(m instanceof Message) {
+				Message mess = (Message) m;
 				logger.info(mess.author() + " pm'd me:\n" + mess.body());
 				
 				for(Summon summon : pmSummons) {
