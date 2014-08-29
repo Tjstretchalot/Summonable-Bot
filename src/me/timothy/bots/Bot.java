@@ -31,7 +31,6 @@ public class Bot {
 	private Throwable lastError;
 	
 	/** The logger. */
-	@SuppressWarnings("unused")
 	private Logger logger;
 	
 	/** The user. */
@@ -141,7 +140,8 @@ public class Bot {
 		}
 		try {
 			CommentResponse resp = RedditUtils.comment(user, replyable.fullname(), message);
-			if(resp.getErrors().size() > 0)
+			logger.trace("Responded to " + replyable.id());
+			if(resp.getErrors() != null && resp.getErrors().size() > 0)
 				return false;
 			
 			return true;

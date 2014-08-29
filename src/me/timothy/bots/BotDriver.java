@@ -330,6 +330,7 @@ public class BotDriver implements Runnable {
 		logger.error(message);
 
 		for(Throwable th : errors) {
+			th.printStackTrace();
 			logger.error(th);
 		}
 		checkForError(Level.ERROR);
