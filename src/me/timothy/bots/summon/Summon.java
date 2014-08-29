@@ -2,10 +2,9 @@ package me.timothy.bots.summon;
 
 import me.timothy.bots.Database;
 import me.timothy.bots.FileConfiguration;
-
-import com.github.jreddit.comment.Comment;
-import com.github.jreddit.message.Message;
-import com.github.jreddit.submissions.Submission;
+import me.timothy.jreddit.info.Comment;
+import me.timothy.jreddit.info.Link;
+import me.timothy.jreddit.info.Message;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -23,7 +22,7 @@ public abstract class Summon {
 	 * @return if any new changes need to be applied
 	 * @throws UnsupportedOperationException if this type of summon isn't implemented
 	 */
-	public boolean parse(Submission submission) throws UnsupportedOperationException {
+	public boolean parse(Link submission) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 	
