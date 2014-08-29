@@ -152,6 +152,7 @@ public class BotDriver implements Runnable {
 			
 			for(Summon summon : submissionSummons) {
 				if(summon.parse(submission)) {
+					database.addFullname(submission.getFullName());
 					String response = summon.applyChanges(config, database);
 					
 					handleReply(submission, response);
