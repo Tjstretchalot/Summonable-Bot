@@ -2,8 +2,6 @@ package me.timothy.bots;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.List;
-
 import me.timothy.bots.summon.Summon;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Link;
