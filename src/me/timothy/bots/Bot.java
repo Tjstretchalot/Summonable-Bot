@@ -19,16 +19,11 @@ import org.json.simple.parser.ParseException;
  * the connecting logic (looping through each comment that has to be checked
  * and checking it, for example). 
  * <br><br>
- * This class does NOT ever sleep, so you may run into API restrictions. In an 
- * effort to standardize the various error protocols that jReddit uses, this uses
- * a C-like error system.
+ * This class does NOT ever sleep, so you may run into API restrictions.
  * 
  * @author Timothy
  */
 public class Bot {
-	
-	/** The last error. */
-	private Throwable lastError;
 	
 	/** The logger. */
 	private Logger logger;
@@ -57,17 +52,13 @@ public class Bot {
 	 * @param username Username of the reddit account
 	 * @param password Password of the reddit account
 	 * @return true on success, false on failure
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public boolean loginReddit(String username, String password) {
-		try {
-			user = new User(username, password);
-			RedditUtils.loginUser(user);
-			return true;
-		}catch(Exception e) {
-			lastError = e;
-			user = null;
-			return false;
-		}
+	public boolean loginReddit(String username, String password) throws IOException, ParseException {
+		user = new User(username, password);
+		RedditUtils.loginUser(user);
+		return true;
 	}
 
 	/**
@@ -75,54 +66,45 @@ public class Bot {
 	 *
 	 * @return a list of recent comments
 	 * @throws IllegalStateException if the user is null
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public Listing getRecentComments() throws IllegalStateException {
+	public Listing getRecentComments() throws IllegalStateException, IOException, ParseException {
 		if(user == null) {
 			throw new IllegalStateException("User is null"); 
 		}
-
-		try {
-			return RedditUtils.getRecentComments(user, subreddit);
-		} catch (IOException | ParseException e) {
-			lastError = e;
-			return null;
-		}
+		
+		return RedditUtils.getRecentComments(user, subreddit);
 	}
 
 	/**
 	 * Returns any new submissions.
 	 *
 	 * @return new submissions, or null if an error occurs
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public Listing getRecentSubmissions() throws IllegalStateException {
+	public Listing getRecentSubmissions() throws IllegalStateException, IOException, ParseException {
 		if(user == null) {
 			throw new IllegalStateException("User is null"); 
 		}
-		try {
-			return RedditUtils.getSubmissions(user, subreddit, SortType.NEW);
-		}catch(Exception ex) {
-			lastError = ex;
-			return null;
-		}
+		
+		return RedditUtils.getSubmissions(user, subreddit, SortType.NEW);
 	}
 
 	/**
 	 * Returns any new messages.
 	 *
 	 * @return new messages, or null if an error occurs
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public Listing getUnreadMessages() {
+	public Listing getUnreadMessages() throws IOException, ParseException {
 		if(user == null) {
 			throw new IllegalStateException("User is null"); 
 		}
 		
-		try {
-			return RedditUtils.getUnreadMessages(user);
-		} catch (IOException | ParseException e) {
-			lastError = e;
-			return null;
-		}
-				
+		return RedditUtils.getUnreadMessages(user);	
 	}
 	
 	
@@ -133,22 +115,19 @@ public class Bot {
 	 * @param message the message
 	 * @return success
 	 * @throws IllegalStateException the illegal state exception
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public boolean respondTo(Thing replyable, String message) throws IllegalStateException {
+	public boolean respondTo(Thing replyable, String message) throws IllegalStateException, IOException, ParseException {
 		if(user == null) {
 			throw new IllegalStateException("null user");
 		}
-		try {
-			CommentResponse resp = RedditUtils.comment(user, replyable.fullname(), message);
-			logger.trace("Responded to " + replyable.id());
-			if(resp.getErrors() != null && resp.getErrors().size() > 0)
-				return false;
-			
-			return true;
-		} catch (IOException | ParseException e) {
-			lastError = e;
+		CommentResponse resp = RedditUtils.comment(user, replyable.fullname(), message);
+		logger.trace("Responded to " + replyable.id());
+		if(resp.getErrors() != null && resp.getErrors().size() > 0)
 			return false;
-		}
+
+		return true;
 	}
 
 	/**
@@ -157,35 +136,17 @@ public class Bot {
 	 * @param ids the messages
 	 * @return if the message was probably marked as read
 	 * @throws IllegalStateException if rest client or user is null
+	 * @throws ParseException if the response from reddit is unparsable
+	 * @throws IOException if an i/o exception occurs
 	 */
-	public boolean setReadMessage(String ids) throws IllegalStateException {
+	public boolean setReadMessage(String ids) throws IllegalStateException, IOException, ParseException {
 		if(user == null) {
 			throw new IllegalStateException("null user");
 		}
 		
-		try {
-			RedditUtils.markAsRead(user, ids);
-		} catch (IOException | ParseException e) {
-			lastError = e;
-			return false;
-		}
+		RedditUtils.markAsRead(user, ids);
 		
 		return true;
-	}
-	
-	/**
-	 * Returns the last error, if there is one.
-	 * @return most recent error
-	 */
-	public Throwable getLastError() {
-		return lastError;
-	}
-
-	/**
-	 * Clears the last error.
-	 */
-	public void clearLastError() {
-		lastError = null;
 	}
 
 	/**
