@@ -37,8 +37,15 @@ public abstract class Retryable<T> {
 	 */
 	public T run() {
 		int duration = 10000, times = 0;
-		T result;
-		while((result = runImpl()) == null) {
+		T result = null;
+		do {
+			try {
+				result = runImpl();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			if(result != null)
+				return result;
 			times++;
 			long sleepTime = (long) (duration * Math.pow(2, times));
 			
@@ -48,8 +55,7 @@ public abstract class Retryable<T> {
 			}catch(InterruptedException ex) {
 				throw new RuntimeException(ex);
 			}
-		}
-		return result;
+		}while(true);
 	}
 	
 	/**
@@ -57,5 +63,5 @@ public abstract class Retryable<T> {
 	 *
 	 * @return the t
 	 */
-	protected abstract T runImpl();
+	protected abstract T runImpl() throws Exception;
 }
