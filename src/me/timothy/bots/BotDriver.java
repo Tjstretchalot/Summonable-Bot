@@ -9,7 +9,6 @@ import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.Message;
 import me.timothy.jreddit.info.Thing;
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -192,7 +191,7 @@ public class BotDriver implements Runnable {
 		new Retryable<Boolean>("markRead") {
 
 			@Override
-			protected Boolean runImpl() {
+			protected Boolean runImpl() throws Exception {
 				String ids = "";
 				boolean first = true;
 				for(int i = 0; i < messages.numChildren(); i++) {
@@ -220,9 +219,14 @@ public class BotDriver implements Runnable {
 	 * the program as if by fail() on failure.
 	 */
 	private void login() {
-		boolean success = bot.loginReddit(config.getUserInfo()
-				.getProperty("username"),
-				config.getUserInfo().getProperty("password"));
+		boolean success = false;
+		try {
+			success = bot.loginReddit(config.getUserInfo()
+					.getProperty("username"),
+					config.getUserInfo().getProperty("password"));
+		} catch (IOException | org.json.simple.parser.ParseException e) {
+			e.printStackTrace();
+		}
 		if (!success)
 			fail("Failed to authenticate to reddit");
 	}
@@ -236,7 +240,7 @@ public class BotDriver implements Runnable {
 	private Listing getRecentComments() {
 		return new Retryable<Listing>("getRecentComments") {
 			@Override
-			protected Listing runImpl() {
+			protected Listing runImpl() throws Exception {
 				return bot.getRecentComments();
 			}
 		}.run();
@@ -253,7 +257,7 @@ public class BotDriver implements Runnable {
 		new Retryable<Boolean>("handleReply") {
 
 			@Override
-			protected Boolean runImpl() {
+			protected Boolean runImpl() throws Exception {
 				return bot.respondTo(replyable, response);
 			}
 			
@@ -269,7 +273,7 @@ public class BotDriver implements Runnable {
 	private Listing getRecentSubmissions() {
 		return new Retryable<Listing>("getRecentSubmissions") {
 			@Override
-			protected Listing runImpl() {
+			protected Listing runImpl() throws Exception {
 				return bot.getRecentSubmissions();
 			}
 		}.run();
@@ -284,7 +288,7 @@ public class BotDriver implements Runnable {
 	private Listing getRecentMessages() {
 		return new Retryable<Listing>("getRecentMessages") {
 			@Override
-			protected Listing runImpl() {
+			protected Listing runImpl() throws Exception {
 				return bot.getUnreadMessages();
 			}
 		}.run();
@@ -308,20 +312,6 @@ public class BotDriver implements Runnable {
 	}
 
 	/**
-	 * Checks if the bot has any recent errors, and if so
-	 * logs them on {@code level}.
-	 *
-	 * @param level the level to log the latest error, if applicable
-	 */
-	private void checkForError(Level level) {
-		Throwable lastExc = bot.getLastError();
-
-		if (lastExc != null) {
-			logger.log(level, lastExc);
-		}
-	}
-
-	/**
 	 * Terminates the program after logging {@code message} at
 	 * Level.ERROR, as well as logging the list of errors
 	 * 
@@ -335,7 +325,6 @@ public class BotDriver implements Runnable {
 			th.printStackTrace();
 			logger.error(th);
 		}
-		checkForError(Level.ERROR);
 		System.exit(0);
 	}
 }
