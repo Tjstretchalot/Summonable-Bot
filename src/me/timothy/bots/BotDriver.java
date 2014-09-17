@@ -82,24 +82,33 @@ public class BotDriver implements Runnable {
 
 		try {
 			while (true) {
-				logger.trace("Scanning comments..");
-				scanComments();
-				
-				logger.trace("Scanning submissions..");
-				scanSubmissions();
-				
-				logger.trace("Scanning pm's..");
-				scanPersonalMessages();
-				
-				System.out.flush();
-				System.err.flush();
-				sleepFor(30000);
+				doLoop();
 			}
 		} catch (Exception e) {
 			fail("Unexpected exception", e);
 		}
 	}
 
+	/**
+	 * Performs one loop for the bot
+	 * @throws IOException if an i/o related exception occurs 
+	 * @throws org.json.simple.parser.ParseException if a parse exception occurs
+	 * @throws ParseException if a parse exception occurs
+	 */
+	private void doLoop() throws IOException, org.json.simple.parser.ParseException, ParseException {
+		logger.trace("Scanning comments..");
+		scanComments();
+		
+		logger.trace("Scanning submissions..");
+		scanSubmissions();
+		
+		logger.trace("Scanning pm's..");
+		scanPersonalMessages();
+		
+		System.out.flush();
+		System.err.flush();
+		sleepFor(30000);
+	}
 	/**
 	 * Loops through recent comments, ignoring comments by banned 
 	 * users or remembered fullnames, and handles them via the appropriate
