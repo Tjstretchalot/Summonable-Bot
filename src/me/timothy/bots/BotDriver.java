@@ -25,25 +25,25 @@ import org.apache.logging.log4j.Logger;
 public class BotDriver implements Runnable {
 	
 	/** The comment summons. */
-	private final Summon[] commentSummons;
+	protected final Summon[] commentSummons;
 	
 	/** The pm summons. */
-	private final Summon[] pmSummons;
+	protected final Summon[] pmSummons;
 	
 	/** The submission summons. */
-	private final Summon[] submissionSummons;
+	protected final Summon[] submissionSummons;
 	
 	/** The config. */
-	private FileConfiguration config;
+	protected FileConfiguration config;
 	
 	/** The database. */
-	private Database database;
+	protected Database database;
 	
 	/** The bot. */
-	private Bot bot;
+	protected Bot bot;
 
 	/** The logger. */
-	private Logger logger;
+	protected Logger logger;
 
 	/**
 	 * Creates a bot driver based on the specified database, configuration info,
@@ -83,6 +83,10 @@ public class BotDriver implements Runnable {
 		try {
 			while (true) {
 				doLoop();
+				
+				System.out.flush();
+				System.err.flush();
+				sleepFor(30000);
 			}
 		} catch (Exception e) {
 			fail("Unexpected exception", e);
@@ -95,7 +99,7 @@ public class BotDriver implements Runnable {
 	 * @throws org.json.simple.parser.ParseException if a parse exception occurs
 	 * @throws ParseException if a parse exception occurs
 	 */
-	private void doLoop() throws IOException, org.json.simple.parser.ParseException, ParseException {
+	protected void doLoop() throws IOException, org.json.simple.parser.ParseException, ParseException {
 		logger.trace("Scanning comments..");
 		scanComments();
 		
@@ -104,17 +108,13 @@ public class BotDriver implements Runnable {
 		
 		logger.trace("Scanning pm's..");
 		scanPersonalMessages();
-		
-		System.out.flush();
-		System.err.flush();
-		sleepFor(30000);
 	}
 	/**
 	 * Loops through recent comments, ignoring comments by banned 
 	 * users or remembered fullnames, and handles them via the appropriate
 	 * summons.
 	 */
-	private void scanComments() {
+	protected void scanComments() {
 		Listing comments = getRecentComments();
 		sleepFor(2000);
 
@@ -144,7 +144,7 @@ public class BotDriver implements Runnable {
 	 * @throws ParseException if the parse via Summon.CHECK_SUMMON is invalid (should not happen since the check is automatic)
 	 * @throws ParseException if the parse via Summon.CHECK_SUMMON is invalid (should not happen since the check is automatic)
 	 */
-	private void scanSubmissions() throws IOException, org.json.simple.parser.ParseException, ParseException {
+	protected void scanSubmissions() throws IOException, org.json.simple.parser.ParseException, ParseException {
 		Listing submissions = getRecentSubmissions();
 		sleepFor(2000);
 
@@ -169,9 +169,10 @@ public class BotDriver implements Runnable {
 	 * out, and in the case of personal messages checks if any summons are applicable
 	 * and if they are, applies them.
 	 */
-	private void scanPersonalMessages() {
+	protected void scanPersonalMessages() {
 		Listing messages = getRecentMessages();
 		markRead(messages);
+		sleepFor(2000);
 		for(int i = 0; i < messages.numChildren(); i++) {
 			Thing m = (Thing) messages.getChild(i);
 			if(m instanceof Comment) {
@@ -196,7 +197,7 @@ public class BotDriver implements Runnable {
 	 * @param messages the messages
 	 * @see me.timothy.bots.Retryable
 	 */
-	private void markRead(final Listing messages) {
+	protected void markRead(final Listing messages) {
 		new Retryable<Boolean>("markRead") {
 
 			@Override
@@ -227,7 +228,7 @@ public class BotDriver implements Runnable {
 	 * Logs into reddit based on the configuration. Terminates
 	 * the program as if by fail() on failure.
 	 */
-	private void login() {
+	protected void login() {
 		boolean success = false;
 		try {
 			success = bot.loginReddit(config.getUserInfo()
@@ -246,7 +247,7 @@ public class BotDriver implements Runnable {
 	 * @return recent comments
 	 * @see me.timothy.bots.Retryable
 	 */
-	private Listing getRecentComments() {
+	protected Listing getRecentComments() {
 		return new Retryable<Listing>("getRecentComments") {
 			@Override
 			protected Listing runImpl() throws Exception {
@@ -262,7 +263,7 @@ public class BotDriver implements Runnable {
 	 * @param response the thing to reply with
 	 * @see me.timothy.bots.Retryable
 	 */
-	private void handleReply(final Thing replyable, final String response) {
+	protected void handleReply(final Thing replyable, final String response) {
 		new Retryable<Boolean>("handleReply") {
 
 			@Override
@@ -279,7 +280,7 @@ public class BotDriver implements Runnable {
 	 * @return a list of recent submissions
 	 * @see me.timothy.bots.Retryable
 	 */
-	private Listing getRecentSubmissions() {
+	protected Listing getRecentSubmissions() {
 		return new Retryable<Listing>("getRecentSubmissions") {
 			@Override
 			protected Listing runImpl() throws Exception {
@@ -294,7 +295,7 @@ public class BotDriver implements Runnable {
 	 * @return a list of recent messages
 	 * @see me.timothy.bots.Retryable
 	 */
-	private Listing getRecentMessages() {
+	protected Listing getRecentMessages() {
 		return new Retryable<Listing>("getRecentMessages") {
 			@Override
 			protected Listing runImpl() throws Exception {
@@ -310,7 +311,7 @@ public class BotDriver implements Runnable {
 	 * 
 	 * @param ms the time in milliseconds to sleep
 	 */
-	private void sleepFor(long ms) {
+	protected void sleepFor(long ms) {
 		try {
 			logger.trace("Sleeping for " + ms + " milliseconds");
 			Thread.sleep(ms);
@@ -327,7 +328,7 @@ public class BotDriver implements Runnable {
 	 * @param message the message to put in Level.ERROR
 	 * @param errors a list of applicable errors to output
 	 */
-	private void fail(String message, Throwable... errors) {
+	protected void fail(String message, Throwable... errors) {
 		logger.error(message);
 
 		for(Throwable th : errors) {
