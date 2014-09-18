@@ -184,7 +184,11 @@ public class BotDriver implements Runnable {
 				
 				for(Summon summon : pmSummons) {
 					if(summon.parse(mess)) {
-						summon.applyChanges(config, database);
+						String response = summon.applyChanges(config, database);
+						
+						if(response != null) {
+							handleReply(m, response);
+						}
 					}
 				}
 			}

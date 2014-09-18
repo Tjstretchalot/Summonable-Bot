@@ -129,6 +129,19 @@ public class Bot {
 
 		return true;
 	}
+	
+	/**
+	 * Sends a personal message
+	 * @param to who to send the message to
+	 * @param title the title of the message
+	 * @param message the text of the message
+	 * @return if it was a success
+	 * @throws ParseException 
+	 * @throws IOException 
+	 */
+	public boolean sendPM(String to, String title, String message) throws IOException, ParseException {
+		return RedditUtils.sendPersonalMessage(user, to, title, message);
+	}
 
 	/**
 	 * Marks the specified messages as read.
