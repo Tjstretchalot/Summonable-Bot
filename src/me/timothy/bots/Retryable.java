@@ -46,6 +46,7 @@ public abstract class Retryable<T> {
 			}
 			if(result != null)
 				return result;
+			onFailure();
 			times++;
 			long sleepTime = (long) (duration * Math.pow(2, times));
 			
@@ -64,4 +65,10 @@ public abstract class Retryable<T> {
 	 * @return the t
 	 */
 	protected abstract T runImpl() throws Exception;
+	
+	/**
+	 * Called after an exception is thrown or null is returned
+	 * from runImpl
+	 */
+	protected void onFailure() {};
 }
