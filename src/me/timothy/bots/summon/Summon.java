@@ -2,9 +2,6 @@ package me.timothy.bots.summon;
 
 import me.timothy.bots.Database;
 import me.timothy.bots.FileConfiguration;
-import me.timothy.jreddit.info.Comment;
-import me.timothy.jreddit.info.Link;
-import me.timothy.jreddit.info.Message;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -13,41 +10,7 @@ import me.timothy.jreddit.info.Message;
  * 
  * @author Timothy
  */
-public abstract class Summon {
-	
-	/**
-	 * Parses the submission.
-	 *
-	 * @param submission the submission to parse
-	 * @return if any new changes need to be applied
-	 * @throws UnsupportedOperationException if this type of summon isn't implemented
-	 */
-	public boolean parse(Link submission) throws UnsupportedOperationException {
-		throw new UnsupportedOperationException();
-	}
-	
-	/**
-	 * Parses the comment.
-	 *
-	 * @param comment the comment to parse
-	 * @return if any new changes need to be applied
-	 * @throws UnsupportedOperationException if this type of summon isn't implemented
-	 */
-	public boolean parse(Comment comment) throws UnsupportedOperationException {
-		throw new UnsupportedOperationException();
-	}
-	
-	/**
-	 * Parses the message.
-	 *
-	 * @param message the message to parse
-	 * @return if any new changes need to be applied
-	 * @throws UnsupportedOperationException if this type of summon isn't implemented
-	 */
-	public boolean parse(Message message) throws UnsupportedOperationException {
-		throw new UnsupportedOperationException();
-	}
-	
+public interface Summon {
 	/**
 	 * Applies the internal state as changes to the database. If parse was never called
 	 * or the last parse failed, this has undefined behavior.
