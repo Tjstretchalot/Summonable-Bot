@@ -2,7 +2,10 @@ package me.timothy.bots;
 
 import java.io.IOException;
 import java.text.ParseException;
-import me.timothy.bots.summon.Summon;
+
+import me.timothy.bots.summon.CommentSummon;
+import me.timothy.bots.summon.LinkSummon;
+import me.timothy.bots.summon.PMSummon;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
@@ -25,13 +28,13 @@ import org.apache.logging.log4j.Logger;
 public class BotDriver implements Runnable {
 	
 	/** The comment summons. */
-	protected final Summon[] commentSummons;
+	protected final CommentSummon[] commentSummons;
 	
 	/** The pm summons. */
-	protected final Summon[] pmSummons;
+	protected final PMSummon[] pmSummons;
 	
 	/** The submission summons. */
-	protected final Summon[] submissionSummons;
+	protected final LinkSummon[] submissionSummons;
 	
 	/** The config. */
 	protected FileConfiguration config;
@@ -58,8 +61,8 @@ public class BotDriver implements Runnable {
 	 * @param submissionSummons the submission summons
 	 */
 	public BotDriver(Database database, FileConfiguration config,
-			Bot bot, Summon[] commentSummons,
-			Summon[] pmSummons, Summon[] submissionSummons) {
+			Bot bot, CommentSummon[] commentSummons,
+			PMSummon[] pmSummons, LinkSummon[] submissionSummons) {
 		this.commentSummons = commentSummons;
 		this.submissionSummons = submissionSummons;
 		this.pmSummons = pmSummons;
@@ -123,7 +126,7 @@ public class BotDriver implements Runnable {
 			if(database.containsFullname(comment.fullname()) || config.getBannedUsers().contains(comment.author().toLowerCase()))
 				continue;
 			
-			for(Summon summon : commentSummons) {
+			for(CommentSummon summon : commentSummons) {
 				if(summon.parse(comment)) {
 					database.addFullname(comment.fullname());
 					String response = summon.applyChanges(config, database);
@@ -153,7 +156,7 @@ public class BotDriver implements Runnable {
 			if(database.containsFullname(submission.fullname()))
 				continue;
 			
-			for(Summon summon : submissionSummons) {
+			for(LinkSummon summon : submissionSummons) {
 				if(summon.parse(submission)) {
 					database.addFullname(submission.fullname());
 					String response = summon.applyChanges(config, database);
@@ -182,7 +185,7 @@ public class BotDriver implements Runnable {
 				Message mess = (Message) m;
 				logger.info(mess.author() + " pm'd me:\n" + mess.body());
 				
-				for(Summon summon : pmSummons) {
+				for(PMSummon summon : pmSummons) {
 					if(summon.parse(mess)) {
 						String response = summon.applyChanges(config, database);
 						
