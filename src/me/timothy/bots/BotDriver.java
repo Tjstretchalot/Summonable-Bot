@@ -126,6 +126,9 @@ public class BotDriver implements Runnable {
 			if(database.containsFullname(comment.fullname()) || config.getBannedUsers().contains(comment.author().toLowerCase()))
 				continue;
 			
+			if(comment.author().equalsIgnoreCase(config.getUserInfo().getProperty("username")))
+				continue;
+			
 			for(CommentSummon summon : commentSummons) {
 				if(summon.parse(comment)) {
 					database.addFullname(comment.fullname());
@@ -150,6 +153,10 @@ public class BotDriver implements Runnable {
 	protected void scanSubmissions() throws IOException, org.json.simple.parser.ParseException, ParseException {
 		Listing submissions = getRecentSubmissions();
 		sleepFor(2000);
+		
+		if(submissions == null) {
+			return;
+		}
 
 		for (int i = 0; i < submissions.numChildren(); i++) {
 			Link submission = (Link) submissions.getChild(i);
