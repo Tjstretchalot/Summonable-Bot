@@ -13,19 +13,28 @@ import org.apache.logging.log4j.Logger;
  */
 public abstract class Retryable<T> {
 	
+	/**
+	 * Marks that this should fail on exceptions by
+	 * propagating said exception. 
+	 */
+	public static final short FAIL_ON_EXCEPTION = 0;
+
 	/** The logger. */
 	private Logger logger;
 	
 	/** The name. */
 	private String name;
 	
+	private short[] params;
+	
 	/**
 	 * Instantiates a new retryable.
 	 *
 	 * @param name the name
 	 */
-	public Retryable(String name) {
+	public Retryable(String name, short... params) {
 		this.name = name;
+		this.params = params;
 		
 		logger = LogManager.getLogger();
 	}
@@ -43,6 +52,10 @@ public abstract class Retryable<T> {
 				result = runImpl();
 			} catch (Exception e) {
 				e.printStackTrace();
+				for(short s : params) {
+					if(s == FAIL_ON_EXCEPTION)
+						return null;
+				}
 			}
 			if(result != null)
 				return result;

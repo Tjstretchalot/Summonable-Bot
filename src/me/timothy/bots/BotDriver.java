@@ -6,6 +6,7 @@ import java.text.ParseException;
 import me.timothy.bots.summon.CommentSummon;
 import me.timothy.bots.summon.LinkSummon;
 import me.timothy.bots.summon.PMSummon;
+import me.timothy.bots.summon.SummonResponse;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
@@ -123,23 +124,63 @@ public class BotDriver implements Runnable {
 
 		for (int i = 0; i < comments.numChildren(); i++) {
 			Comment comment = (Comment) comments.getChild(i);
-			if(database.containsFullname(comment.fullname()) || config.getBannedUsers().contains(comment.author().toLowerCase()))
-				continue;
-			
-			if(comment.author().equalsIgnoreCase(config.getUserInfo().getProperty("username")))
-				continue;
-			
-			for(CommentSummon summon : commentSummons) {
-				if(summon.parse(comment)) {
-					database.addFullname(comment.fullname());
-					String response = summon.applyChanges(config, database);
-					handleReply(comment, response);
-					sleepFor(2000);
-				}
-			}
+			handleComment(comment, false);
 		}
 	}
 	
+	/**
+	 * Handles a single comment
+	 * 
+	 * @param comment the comment to handle
+	 * @param debug if debug messages should be printed
+	 * @return if the comment was meaningfull
+	 */
+	protected boolean handleComment(Comment comment, boolean debug) {
+		if(database.containsFullname(comment.fullname())) {
+			if(debug)
+				logger.debug(String.format("Skipping %s because the database contains that fullname", comment.fullname()));
+			return false;
+		}
+		if(config.getList("banned").contains(comment.author().toLowerCase())) {
+			if(debug)
+				logger.debug(String.format("Skipping %s because %s is banned", comment.fullname(), comment.author()));
+			return false;
+		}
+		
+		if(comment.author().equalsIgnoreCase(config.getProperty("user.username"))) {
+			if(debug)
+				logger.debug(String.format("Skipping %s because thats my comment", comment.fullname()));
+			return false;
+		}
+		
+		boolean hadResponse = false;
+		SummonResponse response;
+		for(CommentSummon summon : commentSummons) {
+			response = null;
+			try {
+				response = summon.handleComment(comment, database, config);
+			}catch(Exception ex) {
+				logger.catching(ex);
+				database.addFullname(comment.fullname());
+				sleepFor(2000);
+			}
+			
+			
+			if(response != null) {
+				if(debug) {
+					logger.debug("%s gave response %s to %s", summon.getClass().getCanonicalName(), response.getResponseType().name(), comment.fullname());
+				}
+				hadResponse = true;
+				database.addFullname(comment.fullname());
+				handleReply(comment, response.getResponseMessage());
+				sleepFor(2000);
+			}else if(debug) {
+				logger.debug("%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
+			}
+		}
+		return hadResponse;
+	}
+
 	/**
 	 * Loops through recent submissions, ignoring remembered fullnames,
 	 * and checks for "req" (case insensitive) in the title. If req exists,
@@ -160,20 +201,38 @@ public class BotDriver implements Runnable {
 
 		for (int i = 0; i < submissions.numChildren(); i++) {
 			Link submission = (Link) submissions.getChild(i);
-			if(database.containsFullname(submission.fullname()))
-				continue;
-			
-			for(LinkSummon summon : submissionSummons) {
-				if(summon.parse(submission)) {
-					database.addFullname(submission.fullname());
-					String response = summon.applyChanges(config, database);
-					
-					handleReply(submission, response);
-				}
-			}
+			handleSubmission(submission);
 		}
 	}
 	
+	/**
+	 * Handles a single submission
+	 * 
+	 * @param submission the submission the handle
+	 */
+	protected void handleSubmission(Link submission) {
+		if(database.containsFullname(submission.fullname()))
+			return;
+
+		SummonResponse response;
+		for(LinkSummon summon : submissionSummons) {
+			response = null;
+			try {
+				response = summon.handleLink(submission, database, config);
+			}catch(Exception ex) {
+				logger.catching(ex);
+				database.addFullname(submission.fullname());
+				sleepFor(2000);
+			}
+			
+			if(response != null) {
+				database.addFullname(submission.fullname());
+				handleReply(submission, response.getResponseMessage());
+				sleepFor(2000);
+			}
+		}
+	}
+
 	/**
 	 * Loops through unread personal messages and replies to the bot. Prints them
 	 * out, and in the case of personal messages checks if any summons are applicable
@@ -185,21 +244,39 @@ public class BotDriver implements Runnable {
 		sleepFor(2000);
 		for(int i = 0; i < messages.numChildren(); i++) {
 			Thing m = (Thing) messages.getChild(i);
-			if(m instanceof Comment) {
-				Comment mess = (Comment) m;
-				logger.info(mess.author() + " replied to me with:\n" + mess.body());
-			}else if(m instanceof Message) {
-				Message mess = (Message) m;
-				logger.info(mess.author() + " pm'd me:\n" + mess.body());
+			handlePM(m);
+		}
+	}
+
+	/**
+	 * Handles a single message in our inbox
+	 * 
+	 * @param m the pm to handle
+	 */
+	protected void handlePM(Thing m) {
+		if(m instanceof Comment) {
+			Comment mess = (Comment) m;
+			logger.info(mess.author() + " replied to me with:\n" + mess.body());
+		}else if(m instanceof Message) {
+			Message mess = (Message) m;
+			logger.info(mess.author() + " pm'd me:\n" + mess.body());
+
+
+			SummonResponse response;
+			for(PMSummon summon : pmSummons) {
+				response = null;
+				try {
+					response = summon.handlePM(mess, database, config);
+				}catch(Exception ex) {
+					logger.catching(ex);
+					database.addFullname(mess.fullname());
+					sleepFor(2000);
+				}
 				
-				for(PMSummon summon : pmSummons) {
-					if(summon.parse(mess)) {
-						String response = summon.applyChanges(config, database);
-						
-						if(response != null) {
-							handleReply(m, response);
-						}
-					}
+				if(response != null) {
+					database.addFullname(mess.fullname());
+					handleReply(mess, response.getResponseMessage());
+					sleepFor(2000);
 				}
 			}
 		}
@@ -245,9 +322,8 @@ public class BotDriver implements Runnable {
 	protected void login() {
 		boolean success = false;
 		try {
-			success = bot.loginReddit(config.getUserInfo()
-					.getProperty("username"),
-					config.getUserInfo().getProperty("password"));
+			success = bot.loginReddit(config.getProperty("user.username"),
+					config.getProperty("user.password"));
 		} catch (IOException | org.json.simple.parser.ParseException e) {
 			e.printStackTrace();
 		}

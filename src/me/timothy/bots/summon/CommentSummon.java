@@ -1,5 +1,7 @@
 package me.timothy.bots.summon;
 
+import me.timothy.bots.Database;
+import me.timothy.bots.FileConfiguration;
 import me.timothy.jreddit.info.Comment;
 /**
  * An extension to a summon that may parse comments
@@ -7,11 +9,12 @@ import me.timothy.jreddit.info.Comment;
  * @author Timothy
  */
 public interface CommentSummon extends Summon {
-
 	/**
-	 * Parses the comment
-	 * @param comment the comment to parse
-	 * @return if changes should be applied
+	 * Handles the comment 
+	 * @param comment the comment to handle
+	 * @param db the database to modify
+	 * @param config the configuration options to use
+	 * @return the response, or null
 	 */
-	public boolean parse(Comment comment);
+	public SummonResponse handleComment(Comment comment, Database db, FileConfiguration config);
 }

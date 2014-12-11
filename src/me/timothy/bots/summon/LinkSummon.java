@@ -1,5 +1,7 @@
 package me.timothy.bots.summon;
 
+import me.timothy.bots.Database;
+import me.timothy.bots.FileConfiguration;
 import me.timothy.jreddit.info.Link;
 
 /**
@@ -8,12 +10,12 @@ import me.timothy.jreddit.info.Link;
  * @author Timothy
  */
 public interface LinkSummon extends Summon {
-	
 	/**
-	 * Parses the submission.
-	 *
-	 * @param submission the submission to parse
-	 * @return if any new changes need to be applied
+	 * Handles the link 
+	 * @param link the link to handle
+	 * @param db the database to modify
+	 * @param config the configuration options to use
+	 * @return the response, or null
 	 */
-	public boolean parse(Link submission);
+	public SummonResponse handleLink(Link link, Database db, FileConfiguration config);
 }

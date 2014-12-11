@@ -135,11 +135,11 @@ public class Bot {
 	 * @param to who to send the message to
 	 * @param title the title of the message
 	 * @param message the text of the message
-	 * @return if it was a success
+	 * @return if it was a success then null, else a string
 	 * @throws ParseException 
 	 * @throws IOException 
 	 */
-	public boolean sendPM(String to, String title, String message) throws IOException, ParseException {
+	public String sendPM(String to, String title, String message) throws IOException, ParseException {
 		return RedditUtils.sendPersonalMessage(user, to, title, message);
 	}
 

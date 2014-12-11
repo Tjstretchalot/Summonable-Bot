@@ -4,10 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
@@ -21,21 +21,12 @@ import org.apache.logging.log4j.Logger;
  * @author Timothy
  */
 public abstract class FileConfiguration {
-	
-	/** The Constant BANNED_USERS_FILE. */
-	public static final String BANNED_USERS_FILE = "banned.txt";
-	
-	/** The Constant USER_INFO_FILE. */
-	public static final String USER_INFO_FILE = "user.properties";
-	
 	/** The logger. */
 	private Logger logger;
 	
-	/** The banned users. */
-	private List<String> bannedUsers;
-	
-	/** The user info. */
-	private Properties userInfo;
+	private Map<String, List<String>> lists;
+	private Map<String, String> strings;
+	private Map<String, Properties> properties;
 
 	/**
 	 * Initializes a file configuration but does not load
@@ -43,6 +34,10 @@ public abstract class FileConfiguration {
 	 */
 	public FileConfiguration() {
 		logger = LogManager.getLogger();
+		
+		lists = new HashMap<>();
+		strings = new HashMap<>();
+		properties = new HashMap<>();
 	}
 
 	/**
@@ -52,13 +47,97 @@ public abstract class FileConfiguration {
 	 * @throws NullPointerException             if a required key is missing
 	 */
 	public void load() throws IOException, NullPointerException {
-		if(Files.exists(Paths.get(BANNED_USERS_FILE))) {
-			bannedUsers = loadStringList(Paths.get(BANNED_USERS_FILE).toFile());
-		}else {
-			bannedUsers = new ArrayList<>();
-		}
+		addList("banned", false);
+		addProperties("user", true);
+	}
+	
+	/**
+	 * Gets the property where the part before the
+	 * . is the name of the properties and following that
+	 * is the key in the properties.
+	 * <br><br>
+	 * E.g. 
+	 * <br><br>
+	 * <code>
+	 *   addProperty("user", true, "username", "password)<br>
+	 *   .<br>
+	 *   .<br>
+	 *   .<br>
+	 *   getProperty("user.username")
+	 * </code>
+	 * @param key the key
+	 * @return the property
+	 */
+	public String getProperty(String key) {
+		String[] spl = key.split("\\.");
+		Properties props =  properties.get(spl[0]);
 		
-		userInfo = loadProperties(Paths.get(USER_INFO_FILE).toFile(), "username", "password");
+		if(props == null)
+			return null;
+		else
+			return props.getProperty(spl[1]);
+	}
+	
+	public List<String> getList(String name) {
+		return lists.get(name);
+	}
+	
+	public String getString(String name) {
+		return strings.get(name);
+	}
+	
+	/**
+	 * Adds a property to the map where the file is in the current
+	 * directory and the files name is name appended with .properties
+	 * @param name the name of the file except for .properties
+	 * @param required if an NPE should be thrown if the file doesn't exist
+	 * @param requiredKeys the keys that must be in the properties file
+	 * @throws NullPointerException if the file doesn't exist and it is required, or a key is missing from the properties
+	 * @throws IOException if an i/o exception occurs
+	 */
+	public void addProperties(String name, boolean required, String...requiredKeys) throws NullPointerException, IOException {
+		File file = new File(name + ".properties");
+		if(!file.exists()) {
+			if(required)
+				throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+			else
+				properties.put(name, new Properties());
+		}else {
+			properties.put(name, loadProperties(file, requiredKeys));
+		}
+	}
+	
+	/**
+	 * Adds a list to the map where the file is in the current directory
+	 * and the files name is name appended with .txt
+	 * @param name the name of the file
+	 * @param required if an NPE should be thrown if the file doesn't exist
+	 * @throws IOException if an i/o exception occurs
+	 */
+	public void addList(String name, boolean required) throws IOException {
+		File file = new File(name + ".txt");
+		if(!file.exists()) {
+			if(required)
+				throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+			else
+				lists.put(name, new ArrayList<String>());
+		}else
+			lists.put(name, loadStringList(file));
+	}
+	
+	/**
+	 * Adds a string to the map where the file is in the current directory
+	 * and the files name is name appended with .txt
+	 * @param name the name of the file
+	 * @param required if an NPE should be thrown if the file doesn't exist
+	 * @throws IOException if an i/o exception occurs
+	 */
+	public void addString(String name, boolean required) throws IOException {
+		File file = new File(name + ".txt");
+		if(!file.exists() && required) {
+			throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+		}else
+			strings.put(name, loadReplyString(file));
 	}
 
 	/**
@@ -147,23 +226,5 @@ public abstract class FileConfiguration {
 			}
 		}
 		return result;
-	}
-
-	/**
-	 * Gets the banned users.
-	 *
-	 * @return the list of banned users
-	 */
-	public List<String> getBannedUsers() {
-		return bannedUsers;
-	}
-
-	/**
-	 * Gets the user info.
-	 *
-	 * @return the user info
-	 */
-	public Properties getUserInfo() {
-		return userInfo;
 	}
 }
