@@ -20,7 +20,7 @@ import org.apache.logging.log4j.Logger;
  *
  * @author Timothy
  */
-public abstract class FileConfiguration {
+public class FileConfiguration {
 	/** The logger. */
 	private Logger logger;
 	
