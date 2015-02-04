@@ -1,5 +1,7 @@
 package me.timothy.bots;
 
+import java.util.Random;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,6 +14,7 @@ import org.apache.logging.log4j.Logger;
  * @param <T> what is returned
  */
 public abstract class Retryable<T> {
+	private static final Random RANDOM = new Random();
 	
 	/**
 	 * Marks that this should fail on exceptions by
@@ -61,7 +64,10 @@ public abstract class Retryable<T> {
 				return result;
 			onFailure();
 			times++;
-			long sleepTime = (long) (duration * Math.pow(2, times));
+			long sleepTime = (long) (duration * Math.pow(2, RANDOM.nextInt(times)));
+			if(sleepTime > 1000 * 60 * 30) {
+				sleepTime = 1000 * 60 * 30; // 30 minutes
+			}
 			
 			logger.debug(name + " failed (#" + times + "); retrying in " + sleepTime);
 			try {

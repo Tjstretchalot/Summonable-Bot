@@ -6,6 +6,7 @@ import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.SortType;
 import me.timothy.jreddit.User;
 import me.timothy.jreddit.info.CommentResponse;
+import me.timothy.jreddit.info.Errorable;
 import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.Thing;
 
@@ -135,11 +136,11 @@ public class Bot {
 	 * @param to who to send the message to
 	 * @param title the title of the message
 	 * @param message the text of the message
-	 * @return if it was a success then null, else a string
+	 * @return if there are any errors
 	 * @throws ParseException 
 	 * @throws IOException 
 	 */
-	public String sendPM(String to, String title, String message) throws IOException, ParseException {
+	public Errorable sendPM(String to, String title, String message) throws IOException, ParseException {
 		return RedditUtils.sendPersonalMessage(user, to, title, message);
 	}
 
