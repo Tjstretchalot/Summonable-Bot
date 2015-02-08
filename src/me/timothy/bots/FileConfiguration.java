@@ -227,4 +227,28 @@ public class FileConfiguration {
 		}
 		return result;
 	}
+	
+	/**
+	 * Get the map for strings -> strings
+	 * @return the strings
+	 */
+	public Map<String, String> getStrings() {
+		return strings;
+	}
+	
+	/**
+	 * Get the map for strings -> string lists
+	 * @return the lists
+	 */
+	public Map<String, List<String>> getStringLists() {
+		return lists;
+	}
+	
+	/**
+	 * Get the map of strings -> properties
+	 * @return the properties
+	 */
+	public Map<String, Properties> getProperties() {
+		return properties;
+	}
 }

@@ -13,6 +13,7 @@ import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.Message;
 import me.timothy.jreddit.info.Thing;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -168,14 +169,14 @@ public class BotDriver implements Runnable {
 			
 			if(response != null) {
 				if(debug) {
-					logger.debug("%s gave response %s to %s", summon.getClass().getCanonicalName(), response.getResponseType().name(), comment.fullname());
+					logger.printf(Level.TRACE, "%s gave response %s to %s", summon.getClass().getCanonicalName(), response.getResponseType().name(), comment.fullname());
 				}
 				hadResponse = true;
 				database.addFullname(comment.fullname());
 				handleReply(comment, response.getResponseMessage());
 				sleepFor(2000);
 			}else if(debug) {
-				logger.debug("%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
+				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
 			}
 		}
 		return hadResponse;
