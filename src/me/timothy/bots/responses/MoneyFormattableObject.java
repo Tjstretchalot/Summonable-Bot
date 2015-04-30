@@ -17,6 +17,10 @@ public class MoneyFormattableObject implements FormattableObject {
 		return amount;
 	}
 	
+	public void setAmount(int amount) {
+		this.amount = amount;
+	}
+	
 	@Override
 	public String toFormattedString(ResponseInfo info, String myName, FileConfiguration config, Database db) {
 		return numFormatter.format(amount/100.);
