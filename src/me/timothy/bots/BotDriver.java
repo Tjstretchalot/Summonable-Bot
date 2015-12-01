@@ -7,6 +7,7 @@ import me.timothy.bots.summon.CommentSummon;
 import me.timothy.bots.summon.LinkSummon;
 import me.timothy.bots.summon.PMSummon;
 import me.timothy.bots.summon.SummonResponse;
+import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
@@ -174,6 +175,10 @@ public class BotDriver implements Runnable {
 				hadResponse = true;
 				database.addFullname(comment.fullname());
 				handleReply(comment, response.getResponseMessage());
+				
+				if(response.getLinkFlair() != null) {
+					handleFlair(comment.linkID(), response.getLinkFlair());
+				}
 				sleepFor(2000);
 			}else if(debug) {
 				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
@@ -391,6 +396,29 @@ public class BotDriver implements Runnable {
 			@Override
 			protected Listing runImpl() throws Exception {
 				return bot.getUnreadMessages();
+			}
+		}.run();
+	}
+	
+	/**
+	 * Flairs a link
+	 * @param linkId the link to flair
+	 * @param flair the css class of the flair
+	 */
+	protected void handleFlair(final String linkId, final String flair) {
+		new Retryable<Boolean>("handleFlair") {
+			@Override
+			protected Boolean runImpl() throws Exception {
+				try {
+					RedditUtils.flairLink(bot.getUser(), linkId, flair);
+				}catch(IOException ex) {
+					if(ex.getMessage().contains(("403"))) {
+						logger.warn("Access forbidden for flairing " + linkId + " with " + flair);
+						return Boolean.FALSE;
+					}
+					return null;
+				}
+				return Boolean.TRUE;
 			}
 		}.run();
 	}

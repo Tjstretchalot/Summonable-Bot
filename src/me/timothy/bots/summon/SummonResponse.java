@@ -34,9 +34,27 @@ public class SummonResponse {
 	 * The message to respond with
 	 */
 	private String responseMessage;
+	
+	/**
+	 * The type of flair to apply to the link this comment
+	 * is on. Link flairs can be acquired using api/flairselector
+	 */
+	private String linkFlairTemplateId;
 
 	/**
 	 * Creates a new response
+	 * 
+	 * @param responseType the response type
+	 * @param responseMessage the response message
+	 * @param linkFlairTemplateId the flair that should be applied to the link
+	 */
+	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId) {
+		this.responseType = responseType;
+		this.responseMessage = responseMessage;
+		this.linkFlairTemplateId = linkFlairTemplateId;
+	}
+	/**
+	 * Creates a new response with no link flair
 	 * 
 	 * @param responseType
 	 *            the type of response
@@ -44,8 +62,7 @@ public class SummonResponse {
 	 *            the message of the response
 	 */
 	public SummonResponse(ResponseType responseType, String responseMessage) {
-		this.responseType = responseType;
-		this.responseMessage = responseMessage;
+		this(responseType, responseMessage, null);
 	}
 
 	/**
@@ -60,5 +77,9 @@ public class SummonResponse {
 	 */
 	public String getResponseMessage() {
 		return responseMessage;
+	}
+	
+	public String getLinkFlair() {
+		return linkFlairTemplateId;
 	}
 }
