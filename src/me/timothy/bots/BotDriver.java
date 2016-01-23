@@ -126,7 +126,7 @@ public class BotDriver implements Runnable {
 
 		for (int i = 0; i < comments.numChildren(); i++) {
 			Comment comment = (Comment) comments.getChild(i);
-			handleComment(comment, false);
+			handleComment(comment, false, false);
 		}
 	}
 	
@@ -135,23 +135,24 @@ public class BotDriver implements Runnable {
 	 * 
 	 * @param comment the comment to handle
 	 * @param debug if debug messages should be printed
+	 * @param silentMode if this should not reply
 	 * @return if the comment was meaningfull
 	 */
-	protected boolean handleComment(Comment comment, boolean debug) {
+	protected boolean handleComment(Comment comment, boolean debug, boolean silentMode) {
 		if(database.containsFullname(comment.fullname())) {
 			if(debug)
-				logger.debug(String.format("Skipping %s because the database contains that fullname", comment.fullname()));
+				logger.trace(String.format("Skipping %s because the database contains that fullname", comment.fullname()));
 			return false;
 		}
 		if(config.getList("banned").contains(comment.author().toLowerCase())) {
 			if(debug)
-				logger.debug(String.format("Skipping %s because %s is banned", comment.fullname(), comment.author()));
+				logger.trace(String.format("Skipping %s because %s is banned", comment.fullname(), comment.author()));
 			return false;
 		}
 		
 		if(comment.author().equalsIgnoreCase(config.getProperty("user.username"))) {
 			if(debug)
-				logger.debug(String.format("Skipping %s because thats my comment", comment.fullname()));
+				logger.trace(String.format("Skipping %s because thats my comment", comment.fullname()));
 			return false;
 		}
 		
@@ -174,12 +175,14 @@ public class BotDriver implements Runnable {
 				}
 				hadResponse = true;
 				database.addFullname(comment.fullname());
-				handleReply(comment, response.getResponseMessage());
-				
-				if(response.getLinkFlair() != null) {
-					handleFlair(comment.linkID(), response.getLinkFlair());
+				if(!silentMode) {
+					handleReply(comment, response.getResponseMessage());
+					
+					if(response.getLinkFlair() != null) {
+						handleFlair(comment.linkID(), response.getLinkFlair());
+					}
+					sleepFor(2000);
 				}
-				sleepFor(2000);
 			}else if(debug) {
 				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
 			}
@@ -207,7 +210,7 @@ public class BotDriver implements Runnable {
 
 		for (int i = 0; i < submissions.numChildren(); i++) {
 			Link submission = (Link) submissions.getChild(i);
-			handleSubmission(submission);
+			handleSubmission(submission, false);
 		}
 	}
 	
@@ -215,8 +218,9 @@ public class BotDriver implements Runnable {
 	 * Handles a single submission
 	 * 
 	 * @param submission the submission the handle
+	 * @param silentMode if the bot should not respond
 	 */
-	protected void handleSubmission(Link submission) {
+	protected void handleSubmission(Link submission, boolean silentMode) {
 		if(database.containsFullname(submission.fullname()))
 			return;
 
@@ -227,12 +231,12 @@ public class BotDriver implements Runnable {
 				response = summon.handleLink(submission, database, config);
 			}catch(Exception ex) {
 				logger.catching(ex);
-				database.addFullname(submission.fullname());
 				sleepFor(2000);
+			}finally {
+				database.addFullname(submission.fullname());
 			}
 			
-			if(response != null) {
-				database.addFullname(submission.fullname());
+			if(response != null && !silentMode) {
 				handleReply(submission, response.getResponseMessage());
 				sleepFor(2000);
 			}
@@ -250,7 +254,7 @@ public class BotDriver implements Runnable {
 		sleepFor(2000);
 		for(int i = 0; i < messages.numChildren(); i++) {
 			Thing m = (Thing) messages.getChild(i);
-			handlePM(m);
+			handlePM(m, false);
 		}
 	}
 
@@ -258,8 +262,9 @@ public class BotDriver implements Runnable {
 	 * Handles a single message in our inbox
 	 * 
 	 * @param m the pm to handle
+	 * @param silentMode if this should not respond
 	 */
-	protected void handlePM(Thing m) {
+	protected void handlePM(Thing m, boolean silentMode) {
 		if(m instanceof Comment) {
 			Comment mess = (Comment) m;
 			logger.info(mess.author() + " replied to me with:\n" + mess.body());
@@ -275,12 +280,12 @@ public class BotDriver implements Runnable {
 					response = summon.handlePM(mess, database, config);
 				}catch(Exception ex) {
 					logger.catching(ex);
-					database.addFullname(mess.fullname());
 					sleepFor(2000);
+				}finally {
+					database.addFullname(mess.fullname());
 				}
 				
-				if(response != null) {
-					database.addFullname(mess.fullname());
+				if(response != null && !silentMode) {
 					handleReply(mess, response.getResponseMessage());
 					sleepFor(2000);
 				}

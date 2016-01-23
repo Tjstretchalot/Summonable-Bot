@@ -45,7 +45,11 @@ public class ResponseFormatter {
 			
 			String whatToReplace = matcher.group();
 			String keyToReplace = whatToReplace.substring(1, whatToReplace.length() - 1);
-			String whatToReplaceWith = info.getObject(keyToReplace).toFormattedString(info, keyToReplace, config, db);
+			FormattableObject formattableObject = info.getObject(keyToReplace);
+			if(formattableObject == null) {
+				throw new NullPointerException("Unknown key for formatted response " + keyToReplace + ", valid keys are from " + info);
+			}
+			String whatToReplaceWith = formattableObject.toFormattedString(info, keyToReplace, config, db);
 			
 			String theInbetweenText = format.substring(indexThatResponseIsUpToInFormat, startIndexInFormatOfThisGroup);
 			

@@ -1,6 +1,7 @@
 package me.timothy.bots;
 
 import java.io.IOException;
+import java.util.List;
 
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.SortType;
@@ -114,7 +115,7 @@ public class Bot {
 	 *
 	 * @param replyable the thing to reply to
 	 * @param message the message
-	 * @return success
+	 * @return successful as we can be. returns true if we get TOO_OLD
 	 * @throws IllegalStateException the illegal state exception
 	 * @throws ParseException if the response from reddit is unparsable
 	 * @throws IOException if an i/o exception occurs
@@ -125,8 +126,28 @@ public class Bot {
 		}
 		CommentResponse resp = RedditUtils.comment(user, replyable.fullname(), message);
 		logger.trace("Responded to " + replyable.id());
-		if(resp.getErrors() != null && resp.getErrors().size() > 0)
+		if(resp.getErrors() != null && resp.getErrors().size() > 0) {
+			List<?> errors = resp.getErrors();
+			
+			logger.trace("Got errors for reply to " + replyable.fullname() + ": " + errors.toString());
+			
+			for(Object o : errors) {
+				if(o instanceof List) {
+					List<?> error = (List<?>) o;
+					for(Object o2 : error) {
+						if(o2 instanceof String) {
+							String errorMessage = (String) o2;
+							
+							if(errorMessage.equals("TOO_OLD")) {
+								logger.trace("TOO_OLD error => response was a success (for our purposes)");
+								return true;
+							}
+						}
+					}
+				}
+			}
 			return false;
+		}
 
 		return true;
 	}
