@@ -155,7 +155,8 @@ public class BotDriver implements Runnable {
 				logger.trace(String.format("Skipping %s because thats my comment", comment.fullname()));
 			return false;
 		}
-		
+
+		database.addFullname(comment.fullname());
 		boolean hadResponse = false;
 		SummonResponse response;
 		for(CommentSummon summon : commentSummons) {
@@ -164,7 +165,6 @@ public class BotDriver implements Runnable {
 				response = summon.handleComment(comment, database, config);
 			}catch(Exception ex) {
 				logger.catching(ex);
-				database.addFullname(comment.fullname());
 				sleepFor(2000);
 			}
 			
@@ -174,7 +174,6 @@ public class BotDriver implements Runnable {
 					logger.printf(Level.TRACE, "%s gave response %s to %s", summon.getClass().getCanonicalName(), response.getResponseType().name(), comment.fullname());
 				}
 				hadResponse = true;
-				database.addFullname(comment.fullname());
 				if(!silentMode) {
 					handleReply(comment, response.getResponseMessage());
 					
@@ -223,6 +222,7 @@ public class BotDriver implements Runnable {
 	protected void handleSubmission(Link submission, boolean silentMode) {
 		if(database.containsFullname(submission.fullname()))
 			return;
+		database.addFullname(submission.fullname());
 
 		SummonResponse response;
 		for(LinkSummon summon : submissionSummons) {
@@ -232,8 +232,6 @@ public class BotDriver implements Runnable {
 			}catch(Exception ex) {
 				logger.catching(ex);
 				sleepFor(2000);
-			}finally {
-				database.addFullname(submission.fullname());
 			}
 			
 			if(response != null && !silentMode) {
@@ -272,7 +270,11 @@ public class BotDriver implements Runnable {
 			Message mess = (Message) m;
 			logger.info(mess.author() + " pm'd me:\n" + mess.body());
 
-
+			if(database.containsFullname(mess.fullname())) {
+				logger.trace("Skipping message " + mess.fullname() + " since I already have it in my database");
+				return;
+			}
+			database.addFullname(mess.fullname());
 			SummonResponse response;
 			for(PMSummon summon : pmSummons) {
 				response = null;
@@ -281,8 +283,6 @@ public class BotDriver implements Runnable {
 				}catch(Exception ex) {
 					logger.catching(ex);
 					sleepFor(2000);
-				}finally {
-					database.addFullname(mess.fullname());
 				}
 				
 				if(response != null && !silentMode) {

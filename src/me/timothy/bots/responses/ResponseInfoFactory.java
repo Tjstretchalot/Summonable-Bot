@@ -3,6 +3,9 @@ package me.timothy.bots.responses;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+
 import me.timothy.jreddit.info.Comment;
 
 public class ResponseInfoFactory {
@@ -63,6 +66,10 @@ public class ResponseInfoFactory {
 				result.addTemporaryString(key, username);
 			}else if(key.startsWith("money")) {
 				String moneyString = param.toString().replace("$", "");
+				if(moneyString.length() == 0) {
+					LogManager.getLogger().printf(Level.WARN, "Empty money string for getResponseInfo(" + format + ", " + message + ") param=" + param);
+					continue;
+				}
 				int amount = (int) Math.round(Double.parseDouble(moneyString) * 100);
 				result.addTemporaryObject(key, new MoneyFormattableObject(amount));
 			}

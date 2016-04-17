@@ -1,9 +1,11 @@
 package me.timothy.bots;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,9 @@ public class FileConfiguration {
 	/** The logger. */
 	private Logger logger;
 	
+	/** The folder */
+	private Path folder;
+	
 	private Map<String, List<String>> lists;
 	private Map<String, String> strings;
 	private Map<String, Properties> properties;
@@ -35,6 +40,7 @@ public class FileConfiguration {
 	public FileConfiguration() {
 		logger = LogManager.getLogger();
 		
+		folder = Paths.get(".").toAbsolutePath();
 		lists = new HashMap<>();
 		strings = new HashMap<>();
 		properties = new HashMap<>();
@@ -52,6 +58,31 @@ public class FileConfiguration {
 	}
 	
 	/**
+	 * Gets the absolute path of the folder that configuration
+	 * is being loaded from
+	 * @return the folder that configuration is being loaded from
+	 */
+	public Path getFolder() {
+		return folder;
+	}
+	
+	/**
+	 * Sets the path to the folder that configuration is being loaded
+	 * from. Cannot be null and must exist.
+	 * @param path the folder to load config from
+	 */
+	public void setFolder(Path path) {
+		if(path == null)
+			throw new NullPointerException("folder cannot be null");
+		
+		if(!Files.exists(path)) {
+			throw new IllegalArgumentException("File Configuration folder " + path.toString() + " does not exist");
+		}
+		
+		folder = path.toAbsolutePath();
+	}
+	
+	/**
 	 * Gets the property where the part before the
 	 * . is the name of the properties and following that
 	 * is the key in the properties.
@@ -59,7 +90,7 @@ public class FileConfiguration {
 	 * E.g. 
 	 * <br><br>
 	 * <code>
-	 *   addProperty("user", true, "username", "password)<br>
+	 *   addProperty("user", true, "username", "password")<br>
 	 *   .<br>
 	 *   .<br>
 	 *   .<br>
@@ -96,14 +127,14 @@ public class FileConfiguration {
 	 * @throws IOException if an i/o exception occurs
 	 */
 	public void addProperties(String name, boolean required, String...requiredKeys) throws NullPointerException, IOException {
-		File file = new File(name + ".properties");
-		if(!file.exists()) {
+		Path path = Paths.get(folder.toString(), name + ".properties");
+		if(!Files.exists(path)) {
 			if(required)
-				throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+				throw new NullPointerException(path.toString() + " required but doesn't exist");
 			else
 				properties.put(name, new Properties());
 		}else {
-			properties.put(name, loadProperties(file, requiredKeys));
+			properties.put(name, loadProperties(path, requiredKeys));
 		}
 	}
 	
@@ -115,14 +146,14 @@ public class FileConfiguration {
 	 * @throws IOException if an i/o exception occurs
 	 */
 	public void addList(String name, boolean required) throws IOException {
-		File file = new File(name + ".txt");
-		if(!file.exists()) {
+		Path path = Paths.get(folder.toString(), name + ".txt");
+		if(!Files.exists(path)) {
 			if(required)
-				throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+				throw new NullPointerException(path.toString() + " required but doesn't exist");
 			else
 				lists.put(name, new ArrayList<String>());
 		}else
-			lists.put(name, loadStringList(file));
+			lists.put(name, loadStringList(path));
 	}
 	
 	/**
@@ -133,18 +164,18 @@ public class FileConfiguration {
 	 * @throws IOException if an i/o exception occurs
 	 */
 	public void addString(String name, boolean required) throws IOException {
-		File file = new File(name + ".txt");
-		if(!file.exists() && required) {
-			throw new NullPointerException(file.getAbsolutePath() + " required but doesn't exist");
+		Path path = Paths.get(folder.toString(), name + ".txt");
+		if(!Files.exists(path) && required) {
+			throw new NullPointerException(path.toString() + " required but doesn't exist");
 		}else
-			strings.put(name, loadReplyString(file));
+			strings.put(name, loadReplyString(path));
 	}
 
 	/**
 	 * Loads properties from the specified file, as if by
 	 * {@link java.util.Properties#load(java.io.Reader)}
 	 * 
-	 * @param file
+	 * @param path
 	 *            the file to load from
 	 * @param requiredKeys
 	 *            the list of required keys
@@ -154,17 +185,17 @@ public class FileConfiguration {
 	 * @throws NullPointerException
 	 *             if a required key is missing or the file is null
 	 */
-	protected Properties loadProperties(File file, String... requiredKeys)
+	protected Properties loadProperties(Path path, String... requiredKeys)
 			throws IOException, NullPointerException {
-		logger.debug("Loading properties from " + file.getCanonicalPath());
+		logger.debug("Loading properties from " + path.toString());
 		Properties props = new Properties();
-		try (FileReader fr = new FileReader(file)) {
+		try (FileReader fr = new FileReader(path.toFile())) {
 			props.load(fr);
 		}
 
 		for (String reqKey : requiredKeys) {
 			if (!props.containsKey(reqKey))
-				throw new NullPointerException(file.getName()
+				throw new NullPointerException(path.toString()
 						+ " is missing key " + reqKey);
 		}
 		return props;
@@ -175,16 +206,16 @@ public class FileConfiguration {
 	 * (#). Any empty lines prior to the first non-empty line are ignored. Lines
 	 * are separated Unix-like (only \n)
 	 * 
-	 * @param file
+	 * @param path
 	 *            the file to load from
 	 * @return the reply format
 	 * @throws IOException
 	 *             if an i/o exception occurs, like the file not existing
 	 */
-	protected String loadReplyString(File file) throws IOException {
-		logger.debug("Loading reply string from " + file.getCanonicalPath());
+	protected String loadReplyString(Path path) throws IOException {
+		logger.debug("Loading reply string from " + path.toString());
 		String result = "";
-		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(path.toFile()))) {
 			String ln;
 			boolean first = true;
 			while ((ln = br.readLine()) != null) {
@@ -207,16 +238,16 @@ public class FileConfiguration {
 	 * {@link java.lang.String#substring(int)} with parameter 3. All strings
 	 * are lower-cased.
 	 * 
-	 * @param file
+	 * @param path
 	 *            the file to load from
 	 * @return each line in the file
 	 * @throws IOException
 	 *             if an i/o exception occurs, like the file not existing
 	 */
-	protected List<String> loadStringList(File file) throws IOException {
-		logger.debug("Loading string list from " + file.getCanonicalPath());
+	protected List<String> loadStringList(Path path) throws IOException {
+		logger.debug("Loading string list from " + path.toString());
 		List<String> result = new ArrayList<>();
-		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(path.toFile()))) {
 			String ln;
 			while ((ln = br.readLine()) != null) {
 				if (ln.startsWith("/u/")) {
