@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 
+import me.timothy.bots.BotUtils;
 import me.timothy.jreddit.info.Comment;
 
 public class ResponseInfoFactory {
@@ -31,7 +32,7 @@ public class ResponseInfoFactory {
 	 *   <li> &lt;user#&gt;  - Parses some text either of the format /u/username or username,
 	 *                         then strips the /u/ if it exists. The key is equal to the inside </li>
 	 *                         
-	 *   <li> &lt;money#&gt; - Parses some number of the form $0.00, 0.00, or 0.00$ then srips the
+	 *   <li> &lt;money#&gt; - Parses some number of the form $0.00, 0.00, $1,000.05 or 0.00$ then strips the
 	 *                         dollar sign and parses. The key is equal to the inside (e.g. money1) </li>
 	 * </ul>
 	 * 
@@ -65,13 +66,7 @@ public class ResponseInfoFactory {
 					username = username.substring(3);
 				result.addTemporaryString(key, username);
 			}else if(key.startsWith("money")) {
-				String moneyString = param.toString().replace("$", "");
-				if(moneyString.length() == 0) {
-					LogManager.getLogger().printf(Level.WARN, "Empty money string for getResponseInfo(" + format + ", " + message + ") param=" + param);
-					continue;
-				}
-				int amount = (int) Math.round(Double.parseDouble(moneyString) * 100);
-				result.addTemporaryObject(key, new MoneyFormattableObject(amount));
+				result.addTemporaryObject(key, new MoneyFormattableObject(BotUtils.parseDollarAmount(param.toString())));
 			}
 		}
 		return result;

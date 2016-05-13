@@ -23,6 +23,44 @@ public class BotUtils {
 	/** The date formatter. */
 	private static DateFormat dateFormatter;
 
+
+	 
+	/**
+	 * Get the string to use to search for a dollar amount.
+	 * 
+	 * @return a string appropriate for searching for a dollar amount. Does
+	 * not contain any groups.
+	 */
+	public static String getDollarAmountPatternString() {
+		return "\\$?[\\d,]+\\.?\\d{0,2}\\$?(?: |$)";
+	}
+	
+	/**
+	 * Parses the group returned from {@link BotUtils#getDollarAmountPatternString()}
+	 * 
+	 * @param string the group
+	 * @return the value in pennies
+	 * @throws NumberFormatException if the quantity is not a valid dollar amount
+	 */
+	public static int parseDollarAmount(String string) throws NumberFormatException {
+		string = string.replace(",", "");
+		string = string.replace("$", "");
+		
+		boolean hasDecimal = string.indexOf(".") > -1;
+		
+		String wholePart = hasDecimal ? string.substring(0, string.indexOf(".")) : string; 
+		String decimalPart = hasDecimal ? string.substring(string.indexOf(".") + 1) : "00";
+		
+		if(decimalPart.length() < 2) {
+			decimalPart += "0";
+		}else if(decimalPart.length() > 2) {
+			throw new NumberFormatException(string + " has too much precision after the period");
+		}
+		
+		return Integer.valueOf(wholePart) * 100 + Integer.valueOf(decimalPart);
+		
+	}
+	
 	/**
 	 * Formats the specified number like you would expect for a dollar amount.
 	 * Does not add a dollar sign
