@@ -3,9 +3,6 @@ package me.timothy.bots.responses;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-
 import me.timothy.bots.BotUtils;
 import me.timothy.jreddit.info.Comment;
 
