@@ -57,8 +57,8 @@ public class Bot {
 	 * @throws ParseException if the response from reddit is unparsable
 	 * @throws IOException if an i/o exception occurs
 	 */
-	public boolean loginReddit(String username, String password) throws IOException, ParseException {
-		user = new User(username, password);
+	public boolean loginReddit(String username, String password, String appClientID, String appClientSecret) throws IOException, ParseException {
+		user = new User(username, password, appClientID, appClientSecret);
 		RedditUtils.loginUser(user);
 		return true;
 	}

@@ -2,15 +2,16 @@ package me.timothy.bots;
 
 import java.io.IOException;
 import java.text.ParseException;
-
 import me.timothy.bots.summon.CommentSummon;
 import me.timothy.bots.summon.LinkSummon;
 import me.timothy.bots.summon.PMSummon;
 import me.timothy.bots.summon.SummonResponse;
 import me.timothy.jreddit.RedditUtils;
+import me.timothy.jreddit.User;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
+import me.timothy.jreddit.info.LoginResponse;
 import me.timothy.jreddit.info.Message;
 import me.timothy.jreddit.info.Thing;
 
@@ -29,6 +30,8 @@ import org.apache.logging.log4j.Logger;
  * @see me.timothy.bots.summon.Summon
  */
 public class BotDriver implements Runnable {
+	/** Time in seconds between touching the reddit api */
+	protected static int BRIEF_PAUSE_MS = 5000;
 	
 	/** The comment summons. */
 	protected final CommentSummon[] commentSummons;
@@ -84,7 +87,7 @@ public class BotDriver implements Runnable {
 	public void run() {
 		logger.trace("Logging in..");
 		login();
-		sleepFor(2000);
+		sleepFor(15000);
 
 		try {
 			while (true) {
@@ -106,6 +109,9 @@ public class BotDriver implements Runnable {
 	 * @throws ParseException if a parse exception occurs
 	 */
 	protected void doLoop() throws IOException, org.json.simple.parser.ParseException, ParseException {
+		logger.trace("Considering relogging in..");
+		maybeLoginAgain();
+		
 		logger.trace("Scanning comments..");
 		scanComments();
 		
@@ -115,6 +121,49 @@ public class BotDriver implements Runnable {
 		logger.trace("Scanning pm's..");
 		scanPersonalMessages();
 	}
+	
+	/**
+	 * Checks if we need to refresh our access token, and if so,
+	 * purges it and logs in.
+	 */
+	protected void maybeLoginAgain()
+	{
+		User user = bot.getUser();
+		LoginResponse loginResponse = user.getLoginResponse();
+		boolean shouldLogin = false;
+		shouldLogin = shouldLogin || loginResponse == null;
+		if(!shouldLogin) {
+			long now = System.currentTimeMillis();
+			long acquiredAt = loginResponse.acquiredAt();
+			long timeInSecondsAfterAcquiredAtThatExpires = loginResponse.expiresIn();
+			
+			long timeInMillisAfterAcquiredAtThatExpires = timeInSecondsAfterAcquiredAtThatExpires * 1000;
+			
+			long timeInMillisThatExpires = acquiredAt + timeInMillisAfterAcquiredAtThatExpires;
+			
+			long timeUntilExpires = timeInMillisThatExpires - now;
+			
+			if(timeUntilExpires < 1000 * 60 * 5) { // 5 minutes
+				shouldLogin = true;
+			}
+		}
+		
+		if(shouldLogin) {
+			user.setLoginResponse(null);
+			sleepFor(BRIEF_PAUSE_MS);
+			new Retryable<Boolean>("Refresh login token") {
+				@Override
+				protected Boolean runImpl() throws IOException, org.json.simple.parser.ParseException {
+					bot.loginReddit(config.getProperty("user.username"),
+							config.getProperty("user.password"),
+							config.getProperty("user.appClientID"),
+							config.getProperty("user.appClientSecret"));
+					return Boolean.TRUE;
+				}
+			}.run();
+		}
+	}
+	
 	/**
 	 * Loops through recent comments, ignoring comments by banned 
 	 * users or remembered fullnames, and handles them via the appropriate
@@ -122,7 +171,7 @@ public class BotDriver implements Runnable {
 	 */
 	protected void scanComments() {
 		Listing comments = getRecentComments();
-		sleepFor(2000);
+		sleepFor(6000);
 
 		for (int i = 0; i < comments.numChildren(); i++) {
 			Comment comment = (Comment) comments.getChild(i);
@@ -165,7 +214,7 @@ public class BotDriver implements Runnable {
 				response = summon.handleComment(comment, database, config);
 			}catch(Exception ex) {
 				logger.catching(ex);
-				sleepFor(2000);
+				sleepFor(BRIEF_PAUSE_MS);
 			}
 			
 			
@@ -180,7 +229,7 @@ public class BotDriver implements Runnable {
 					if(response.getLinkFlair() != null) {
 						handleFlair(comment.linkID(), response.getLinkFlair());
 					}
-					sleepFor(2000);
+					sleepFor(BRIEF_PAUSE_MS);
 				}
 			}else if(debug) {
 				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
@@ -201,7 +250,7 @@ public class BotDriver implements Runnable {
 	 */
 	protected void scanSubmissions() throws IOException, org.json.simple.parser.ParseException, ParseException {
 		Listing submissions = getRecentSubmissions();
-		sleepFor(2000);
+		sleepFor(BRIEF_PAUSE_MS);
 		
 		if(submissions == null) {
 			return;
@@ -231,12 +280,12 @@ public class BotDriver implements Runnable {
 				response = summon.handleLink(submission, database, config);
 			}catch(Exception ex) {
 				logger.catching(ex);
-				sleepFor(2000);
+				sleepFor(BRIEF_PAUSE_MS);
 			}
 			
 			if(response != null && !silentMode) {
 				handleReply(submission, response.getResponseMessage());
-				sleepFor(2000);
+				sleepFor(BRIEF_PAUSE_MS);
 			}
 		}
 	}
@@ -249,7 +298,7 @@ public class BotDriver implements Runnable {
 	protected void scanPersonalMessages() {
 		Listing messages = getRecentMessages();
 		markRead(messages);
-		sleepFor(2000);
+		sleepFor(BRIEF_PAUSE_MS);
 		for(int i = 0; i < messages.numChildren(); i++) {
 			Thing m = (Thing) messages.getChild(i);
 			handlePM(m, false);
@@ -282,12 +331,12 @@ public class BotDriver implements Runnable {
 					response = summon.handlePM(mess, database, config);
 				}catch(Exception ex) {
 					logger.catching(ex);
-					sleepFor(2000);
+					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
 				if(response != null && !silentMode) {
 					handleReply(mess, response.getResponseMessage());
-					sleepFor(2000);
+					sleepFor(BRIEF_PAUSE_MS);
 				}
 			}
 		}
@@ -318,7 +367,7 @@ public class BotDriver implements Runnable {
 				if(ids.length() != 0) {
 					logger.debug("Marking " + ids + " as read");
 					succ = bot.setReadMessage(ids);
-					sleepFor(2000);
+					sleepFor(BRIEF_PAUSE_MS);
 				}
 				return succ;
 			}
@@ -334,7 +383,9 @@ public class BotDriver implements Runnable {
 		boolean success = false;
 		try {
 			success = bot.loginReddit(config.getProperty("user.username"),
-					config.getProperty("user.password"));
+					config.getProperty("user.password"),
+					config.getProperty("user.appClientID"),
+					config.getProperty("user.appClientSecret"));
 		} catch (IOException | org.json.simple.parser.ParseException e) {
 			e.printStackTrace();
 		}
@@ -369,7 +420,8 @@ public class BotDriver implements Runnable {
 
 			@Override
 			protected Boolean runImpl() throws Exception {
-				return bot.respondTo(replyable, response);
+				bot.respondTo(replyable, response);
+				return Boolean.TRUE;
 			}
 			
 		}.run();

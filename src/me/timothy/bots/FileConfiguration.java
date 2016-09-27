@@ -54,7 +54,7 @@ public class FileConfiguration {
 	 */
 	public void load() throws IOException, NullPointerException {
 		addList("banned", false);
-		addProperties("user", true);
+		addProperties("user", true, "username", "password", "appClientID", "appClientSecret");
 	}
 	
 	/**
