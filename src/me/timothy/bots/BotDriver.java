@@ -53,6 +53,13 @@ public class BotDriver implements Runnable {
 
 	/** The logger. */
 	protected Logger logger;
+	
+	/**
+	 *  A runnable that simply calls maybeLoginAgain
+	 *  
+	 *  @see BotDriver#maybeLoginAgain()
+	 */
+	protected Runnable maybeLoginAgainRunnable;
 
 	/**
 	 * Creates a bot driver based on the specified database, configuration info,
@@ -78,6 +85,12 @@ public class BotDriver implements Runnable {
 		this.bot = bot;
 
 		this.logger = LogManager.getLogger();
+		
+		this.maybeLoginAgainRunnable = new Runnable() {
+			public void run() {
+				maybeLoginAgain();
+			}
+		};
 	}
 
 	/**
@@ -161,6 +174,7 @@ public class BotDriver implements Runnable {
 					return Boolean.TRUE;
 				}
 			}.run();
+			sleepFor(BRIEF_PAUSE_MS);
 		}
 	}
 	
@@ -349,7 +363,7 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected void markRead(final Listing messages) {
-		new Retryable<Boolean>("markRead") {
+		new Retryable<Boolean>("markRead", maybeLoginAgainRunnable) {
 
 			@Override
 			protected Boolean runImpl() throws Exception {
@@ -400,7 +414,7 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected Listing getRecentComments() {
-		return new Retryable<Listing>("getRecentComments") {
+		return new Retryable<Listing>("getRecentComments", maybeLoginAgainRunnable) {
 			@Override
 			protected Listing runImpl() throws Exception {
 				return bot.getRecentComments();
@@ -416,7 +430,7 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected void handleReply(final Thing replyable, final String response) {
-		new Retryable<Boolean>("handleReply") {
+		new Retryable<Boolean>("handleReply", maybeLoginAgainRunnable) {
 
 			@Override
 			protected Boolean runImpl() throws Exception {
@@ -434,7 +448,7 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected Listing getRecentSubmissions() {
-		return new Retryable<Listing>("getRecentSubmissions") {
+		return new Retryable<Listing>("getRecentSubmissions", maybeLoginAgainRunnable) {
 			@Override
 			protected Listing runImpl() throws Exception {
 				return bot.getRecentSubmissions();
@@ -449,7 +463,7 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected Listing getRecentMessages() {
-		return new Retryable<Listing>("getRecentMessages") {
+		return new Retryable<Listing>("getRecentMessages", maybeLoginAgainRunnable) {
 			@Override
 			protected Listing runImpl() throws Exception {
 				return bot.getUnreadMessages();
@@ -463,7 +477,7 @@ public class BotDriver implements Runnable {
 	 * @param flair the css class of the flair
 	 */
 	protected void handleFlair(final String linkId, final String flair) {
-		new Retryable<Boolean>("handleFlair") {
+		new Retryable<Boolean>("handleFlair", maybeLoginAgainRunnable) {
 			@Override
 			protected Boolean runImpl() throws Exception {
 				try {
