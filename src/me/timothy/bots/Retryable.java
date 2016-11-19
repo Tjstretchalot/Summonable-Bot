@@ -51,7 +51,7 @@ public abstract class Retryable<T> {
 	 * @param params optional constants that affect the behavior of the retryable
 	 */
 	public Retryable(String name, List<Runnable> failCallbacks, short... params) {
-		if(failCallbacks.isEmpty())
+		if(failCallbacks != null && failCallbacks.isEmpty())
 			failCallbacks = null;
 		
 		this.name = name;
