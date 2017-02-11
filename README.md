@@ -18,6 +18,8 @@ This library is intended for use with bots that:
   
 ## Features
 
+Besides handling the above use-case in a very straightforward way, this library also provides:
+
 ### User Configuration
 
 This library allows for extensive configuration of the underlying bot. For example, while changing the format of a summon would almost always require changes to the logic of the bot, changing the response probably would not. Thus, this library includes utility functions to accept a format string such as:
