@@ -1,7 +1,12 @@
 package me.timothy.bots.summon;
 
+import java.util.List;
+
 /**
- * Describes how a summon will be responding
+ * Describes how a summon will be responding. Unless otherwise specified,
+ * the response will be done through a comment to the relevant body. However,
+ * there is support to message specific individuals as part of a summon 
+ * response.
  * 
  * @author Timothy
  */
@@ -40,6 +45,8 @@ public class SummonResponse {
 	 * is on. Link flairs can be acquired using api/flairselector
 	 */
 	private String linkFlairTemplateId;
+	
+	private List<PMResponse> pmResponses;
 
 	/**
 	 * Creates a new response
@@ -49,10 +56,25 @@ public class SummonResponse {
 	 * @param linkFlairTemplateId the flair that should be applied to the link
 	 */
 	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId) {
+		this(responseType, responseMessage, linkFlairTemplateId, null);
+	}
+	
+	/**
+	 * Creates a new response
+	 * 
+	 * @param responseType the reponse type
+	 * @param responseMessage the response message
+	 * @param linkFlairTemplateId the flair that should be applied to the link
+	 * @param pmResponses the pms that should be sent out (or null for none)
+	 */
+	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses)
+	{
 		this.responseType = responseType;
 		this.responseMessage = responseMessage;
 		this.linkFlairTemplateId = linkFlairTemplateId;
+		this.pmResponses = pmResponses;
 	}
+	
 	/**
 	 * Creates a new response with no link flair
 	 * 
@@ -79,7 +101,17 @@ public class SummonResponse {
 		return responseMessage;
 	}
 	
+	/**
+	 * @return the flair that should be applied to the link
+	 */
 	public String getLinkFlair() {
 		return linkFlairTemplateId;
+	}
+	
+	/**
+	 * @return the pms that should be sent or null for none
+	 */
+	public List<PMResponse> getPMResponses(){
+		return pmResponses;
 	}
 }

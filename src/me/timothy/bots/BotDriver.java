@@ -2,13 +2,17 @@ package me.timothy.bots;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.List;
+
 import me.timothy.bots.summon.CommentSummon;
 import me.timothy.bots.summon.LinkSummon;
+import me.timothy.bots.summon.PMResponse;
 import me.timothy.bots.summon.PMSummon;
 import me.timothy.bots.summon.SummonResponse;
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.User;
 import me.timothy.jreddit.info.Comment;
+import me.timothy.jreddit.info.Errorable;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.LoginResponse;
@@ -243,7 +247,9 @@ public class BotDriver implements Runnable {
 					if(response.getLinkFlair() != null) {
 						handleFlair(comment.linkID(), response.getLinkFlair());
 					}
+					
 					sleepFor(BRIEF_PAUSE_MS);
+					handlePMResponses(response);
 				}
 			}else if(debug) {
 				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
@@ -300,6 +306,8 @@ public class BotDriver implements Runnable {
 			if(response != null && !silentMode) {
 				handleReply(submission, response.getResponseMessage());
 				sleepFor(BRIEF_PAUSE_MS);
+				
+				handlePMResponses(response);
 			}
 		}
 	}
@@ -351,6 +359,8 @@ public class BotDriver implements Runnable {
 				if(response != null && !silentMode) {
 					handleReply(mess, response.getResponseMessage());
 					sleepFor(BRIEF_PAUSE_MS);
+					
+					handlePMResponses(response);
 				}
 			}
 		}
@@ -526,5 +536,49 @@ public class BotDriver implements Runnable {
 			logger.error(th);
 		}
 		System.exit(0);
+	}
+	
+	/**
+	 * Sends a message to the specified user with the specified
+	 * title & message, using exponential back-off.
+	 * 
+	 * @param user the user to send the message to
+	 * @param title the title of the message
+	 * @param message the text of the message
+	 */
+	protected void sendMessage(final String to, final String title, final String message) {
+		new Retryable<Boolean>("Send PM", maybeLoginAgainRunnable) {
+
+			@Override
+			protected Boolean runImpl() throws Exception {
+				Errorable errors = bot.sendPM(to, title, message);
+				List<?> errorsList = errors.getErrors();
+				if(errorsList != null && !errorsList.isEmpty()) {
+					logger.printf(Level.WARN, "Failed to send (to=%s, title=%s, message=%s): %s", to, title, message, errorsList.toString());
+				}
+				return true;
+			}
+
+		}.run();
+	}
+	
+	/**
+	 * Handles the PMResponses that are contained in the summon response, if any,
+	 * by sending pms to the specified users with the specified title and content.
+	 * 
+	 * @param response the response which might have pmresponses.
+	 */
+	protected void handlePMResponses(SummonResponse response) {
+		if(response.getPMResponses() == null || response.getPMResponses().size() == 0)
+			return;
+		
+		logger.printf(Level.INFO, "Summon response generated %d pm responses.", response.getPMResponses().size());
+		for(PMResponse pmResponse : response.getPMResponses())
+		{
+			logger.printf(Level.INFO, "Sending pm response (to=%s, title=%s, message=%s)", pmResponse.getTo(), pmResponse.getTitle(), pmResponse.getText());
+			
+			sendMessage(pmResponse.getTo(), pmResponse.getTitle(), pmResponse.getText());
+			sleepFor(BRIEF_PAUSE_MS);
+		}
 	}
 }
