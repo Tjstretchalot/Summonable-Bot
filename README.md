@@ -1,0 +1,1 @@
+Summonable Bot is a high-level library for use with certain types of reddit bots that want to use Java through my [jReddit](https://github.com/Tjstretchalot/jReddit) library.
