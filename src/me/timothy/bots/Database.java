@@ -1,7 +1,6 @@
 package me.timothy.bots;
 
 
-// TODO: Auto-generated Javadoc
 /**
  * Describes a database. At minimum, a database needs to be able
  * to remember fullnames so comments/submissions aren't used multiple times.
