@@ -27,7 +27,13 @@ public class SummonResponse {
 		 * Implies that this seems to be using the summon, but not in a correct
 		 * manner
 		 */
-		INVALID
+		INVALID,
+		
+		/**
+		 * This indicates that there is no standard response in this response
+		 * (i.e. just a report but no comment)
+		 */
+		SILENT
 	}
 
 	/**
@@ -47,7 +53,9 @@ public class SummonResponse {
 	private String linkFlairTemplateId;
 	
 	private List<PMResponse> pmResponses;
-
+	
+	private String reportMessage;
+	
 	/**
 	 * Creates a new response
 	 * 
@@ -69,10 +77,16 @@ public class SummonResponse {
 	 */
 	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses)
 	{
+		this(responseType, responseMessage, linkFlairTemplateId, pmResponses, null);
+	}
+	
+	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses, String reportMessage)
+	{
 		this.responseType = responseType;
 		this.responseMessage = responseMessage;
 		this.linkFlairTemplateId = linkFlairTemplateId;
 		this.pmResponses = pmResponses;
+		this.reportMessage = reportMessage;
 	}
 	
 	/**
@@ -106,6 +120,13 @@ public class SummonResponse {
 	 */
 	public String getLinkFlair() {
 		return linkFlairTemplateId;
+	}
+	
+	/**
+	 * @return the report message for the link
+	 */
+	public String getReportMessage() {
+		return reportMessage;
 	}
 	
 	/**

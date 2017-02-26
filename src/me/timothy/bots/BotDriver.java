@@ -9,6 +9,7 @@ import me.timothy.bots.summon.LinkSummon;
 import me.timothy.bots.summon.PMResponse;
 import me.timothy.bots.summon.PMSummon;
 import me.timothy.bots.summon.SummonResponse;
+import me.timothy.bots.summon.SummonResponse.ResponseType;
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.User;
 import me.timothy.jreddit.info.Comment;
@@ -242,13 +243,21 @@ public class BotDriver implements Runnable {
 				}
 				hadResponse = true;
 				if(!silentMode) {
-					handleReply(comment, response.getResponseMessage());
+					if(response.getResponseType() != ResponseType.SILENT) {
+						handleReply(comment, response.getResponseMessage());
+						sleepFor(BRIEF_PAUSE_MS);
+					}
 					
 					if(response.getLinkFlair() != null) {
 						handleFlair(comment.linkID(), response.getLinkFlair());
+						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
-					sleepFor(BRIEF_PAUSE_MS);
+					if(response.getReportMessage() != null) {
+						handleReport(comment.fullname(), response.getReportMessage());
+						sleepFor(BRIEF_PAUSE_MS);
+					}
+					
 					handlePMResponses(response);
 				}
 			}else if(debug) {
@@ -304,8 +313,15 @@ public class BotDriver implements Runnable {
 			}
 			
 			if(response != null && !silentMode) {
-				handleReply(submission, response.getResponseMessage());
-				sleepFor(BRIEF_PAUSE_MS);
+				if(response.getResponseType() != ResponseType.SILENT) {
+					handleReply(submission, response.getResponseMessage());
+					sleepFor(BRIEF_PAUSE_MS);
+				}
+				
+				if(response.getReportMessage() != null) {
+					handleReport(submission.fullname(), response.getReportMessage());
+					sleepFor(BRIEF_PAUSE_MS);
+				}
 				
 				handlePMResponses(response);
 			}
@@ -356,7 +372,7 @@ public class BotDriver implements Runnable {
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
-				if(response != null && !silentMode) {
+				if(response != null && !silentMode && response.getResponseType() != ResponseType.SILENT) {
 					handleReply(mess, response.getResponseMessage());
 					sleepFor(BRIEF_PAUSE_MS);
 					
@@ -493,6 +509,7 @@ public class BotDriver implements Runnable {
 				try {
 					RedditUtils.flairLink(bot.getUser(), linkId, flair);
 				}catch(IOException ex) {
+					logger.catching(ex);
 					if(ex.getMessage().contains(("403"))) {
 						logger.warn("Access forbidden for flairing " + linkId + " with " + flair);
 						return Boolean.FALSE;
@@ -501,6 +518,18 @@ public class BotDriver implements Runnable {
 				}
 				return Boolean.TRUE;
 			}
+		}.run();
+	}
+	
+	protected void handleReport(final String thingFullname, final String reportMessage) {
+		new Retryable<Boolean>("handleReport", maybeLoginAgainRunnable) {
+
+			@Override
+			protected Boolean runImpl() throws Exception {
+				RedditUtils.report(bot.getUser(), thingFullname, reportMessage);
+				return Boolean.TRUE;
+			}
+			
 		}.run();
 	}
 	
