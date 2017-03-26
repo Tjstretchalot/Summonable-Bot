@@ -609,47 +609,63 @@ public class BotDriver implements Runnable {
 	 * @param userToBan the user to ban
 	 * @param banMessage the message to pass to the user
 	 * @param banReason the predefined string constants (in the subreddit options) for the "reason".
-	 * @param banNote the note to other moderators, less than 100 characters. Will be prefixed with bot username 
-	 * followed by a hypen, which is included in max char count.
+	 * @param banNote the note to other moderators, less than 100 characters.
 	 */
 	protected void handleBanUser(final String userToBan, final String banMessage, final String banReason, final String banNote)
 	{
 		if(userToBan == null || banMessage == null || banReason == null || banNote == null)
 			throw new IllegalArgumentException(String.format("userToBan=%s, banMessage=%s, banReason=%s, banNote=%s something is null", userToBan, banMessage, banReason, banNote));
 		
-		if(userToBan.equalsIgnoreCase(config.getString("user.username")))
+		if(userToBan.equalsIgnoreCase(config.getProperty("user.username")))
 			return;
 		
 		String[] subreddits = bot.getSubreddits();
 		
+		boolean failure = false;
 		for(final String subreddit : subreddits) {
-			new Retryable<Boolean>("handleBan - " + userToBan + " on /r/" + subreddit, maybeLoginAgainRunnable) {
+			Boolean result = new Retryable<Boolean>("handleBan - " + userToBan + " on /r/" + subreddit, maybeLoginAgainRunnable) {
 				@Override
 				protected Boolean runImpl() throws Exception {
 					BannedUsersListing banListing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToBan, bot.getUser());
-					if(banListing != null && banListing.numChildren() > 0)
-						return Boolean.TRUE; // already banned
+					if(banListing != null && banListing.numChildren() > 0) {
+						logger.info(String.format("Failed to ban %s from %s - he was already banned there", userToBan, subreddit));
+						return Boolean.FALSE; // already banned
+					}
 					
 					sleepFor(BRIEF_PAUSE_MS);
 					
 					ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, userToBan, bot.getUser());
-					if(modListing != null && modListing.numChildren() > 0)
-						return Boolean.TRUE; // never attempt to ban moderators
+					if(modListing != null && modListing.numChildren() > 0) {
+						logger.info(String.format("Failed to ban %s from %s - he is a moderator there", userToBan, subreddit));
+						return Boolean.FALSE; // never attempt to ban moderators
+					}
 					
-					RedditUtils.banFromSubreddit(subreddit, userToBan, banMessage, banReason, config.getString("user.username").toLowerCase() + "-" + banNote, bot.getUser());
-					
+					RedditUtils.banFromSubreddit(subreddit, userToBan, banMessage, banReason, banNote, bot.getUser());
+					logger.info(String.format("Banned %s from %s - banMessage=%s, banReason=%s, banNote=%s", userToBan, subreddit, banMessage, banReason, banNote));
 					sleepFor(BRIEF_PAUSE_MS);
 					
 					return Boolean.TRUE;
 				}
 			}.run();
+			
+			if(result != Boolean.TRUE)
+				failure = true;
+		}
+		
+		if(!failure) {
+			onSuccessfullyBannedUser(userToBan);
 		}
 	}
 	
 	/**
-	 * Unbans the specified user from /r/borrow IF the user is banned and the ban note
-	 * includes the bot username as the first string, in all lowercase, followed by a
-	 * hyphen
+	 * Called after we successfully ban a user
+	 * 
+	 * @param username the username that was banned
+	 */
+	protected void onSuccessfullyBannedUser(final String username) {
+	}
+	/**
+	 * Unbans the specified user from all the subreddits this bot monitors
 	 * 
 	 * @param userToUnban the username to unban
 	 */
@@ -657,29 +673,44 @@ public class BotDriver implements Runnable {
 	{
 		String[] subreddits = bot.getSubreddits();
 		
+		boolean failure = false;
 		for(final String subreddit : subreddits) {
-			new Retryable<Boolean>("handleUnban - " + userToUnban + " on /r/" + subreddit, maybeLoginAgainRunnable) {
+			Boolean result = new Retryable<Boolean>("handleUnban - " + userToUnban + " on /r/" + subreddit, maybeLoginAgainRunnable) {
 				@Override
 				protected Boolean runImpl() throws Exception {
 					BannedUsersListing listing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToUnban, bot.getUser());
-					if(listing == null || listing.numChildren() == 0)
-						return Boolean.TRUE; // not banned
+					if(listing == null || listing.numChildren() == 0) {
+						logger.info(String.format("Failed to unban %s from %s - he was not banned there", userToUnban, subreddit));
+						return Boolean.FALSE; // not banned
+					}
 					
 					sleepFor(BRIEF_PAUSE_MS);
-					
-					String banNote = listing.getBannedUserInfo(0).note();
-
-					if(!banNote.startsWith(config.getString("user.username").toLowerCase() + "-"))
-						return Boolean.TRUE; // we didn't ban with handleBanUser on this user for this subreddit
 
 					RedditUtils.unbanFromSubreddit(subreddit, userToUnban, bot.getUser());
+					logger.info(String.format("Unbanned %s from %s", userToUnban, subreddit));
 					
 					sleepFor(BRIEF_PAUSE_MS);
 					
 					return Boolean.TRUE;
 				}
 			}.run();
+			
+			if(result != Boolean.TRUE) {
+				failure = true;
+			}
 		}
+		
+		if(!failure) {
+			onSuccessfullyUnbanUser(userToUnban);
+		}
+	}
+	
+	/**
+	 * Called after we successfully unban a user
+	 * @param username the username that was unbanned
+	 */
+	protected void onSuccessfullyUnbanUser(final String username) {
+		
 	}
 	
 	/**
