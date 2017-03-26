@@ -52,9 +52,50 @@ public class SummonResponse {
 	 */
 	private String linkFlairTemplateId;
 	
+	/**
+	 * The list of pm responses
+	 */
 	private List<PMResponse> pmResponses;
 	
+	/**
+	 * The string to report the message with
+	 */
 	private String reportMessage;
+	
+	/**
+	 * If we should ban userToBan
+	 */
+	private boolean banUser;
+	
+	/**
+	 * The user to ban, if banUser is true
+	 */
+	private String userToBan;
+	
+	/**
+	 * The note to other moderators if banUser is true
+	 */
+	private String banNote;
+	
+	/**
+	 * The message to pass to userToBan if banUser is true
+	 */
+	private String banMessage;
+	
+	/**
+	 * The reason for why we are banning userToBan, if banUser is true
+	 */
+	private String banReason;
+	
+	/**
+	 * If we should unban userToUnban
+	 */
+	private boolean unbanUser;
+	
+	/**
+	 * The user we should unban
+	 */
+	private String userToUnban;
 	
 	/**
 	 * Creates a new response
@@ -70,7 +111,7 @@ public class SummonResponse {
 	/**
 	 * Creates a new response
 	 * 
-	 * @param responseType the reponse type
+	 * @param responseType the response type
 	 * @param responseMessage the response message
 	 * @param linkFlairTemplateId the flair that should be applied to the link
 	 * @param pmResponses the pms that should be sent out (or null for none)
@@ -80,6 +121,15 @@ public class SummonResponse {
 		this(responseType, responseMessage, linkFlairTemplateId, pmResponses, null);
 	}
 	
+	/**
+	 * Creates a new response 
+	 * 
+	 * @param responseType the response type
+	 * @param responseMessage the response message
+	 * @param linkFlairTemplateId the template to flair the summoning thing with
+	 * @param pmResponses the pm responses we need to do
+	 * @param reportMessage the message to report the thing with
+	 */
 	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses, String reportMessage)
 	{
 		this.responseType = responseType;
@@ -89,6 +139,38 @@ public class SummonResponse {
 		this.reportMessage = reportMessage;
 	}
 	
+	/**
+	 * Creates a new response
+	 * 
+	 * @param responseType The response type
+	 * @param responseMessage The response message
+	 * @param linkFlairTemplateId The link flair template id
+	 * @param pmResponses The pm responses
+	 * @param reportMessage The message to report the thing with
+	 * @param banUser If we should ban a user
+	 * @param userToBan The user we should ban
+	 * @param banMessage The message to tell the user that we banned
+	 * @param banReason The reason we banned the user
+	 * @param banNote The note to other moderators for why we banned the user
+	 * @param unbanUser If we should unban a user
+	 * @param userToUnban The user we should unban
+	 */
+	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses, 
+			String reportMessage, boolean banUser, String userToBan, String banMessage, String banReason, String banNote, boolean unbanUser, String userToUnban)
+	{
+		this.responseType = responseType;
+		this.responseMessage = responseMessage;
+		this.linkFlairTemplateId = linkFlairTemplateId;
+		this.pmResponses = pmResponses;
+		this.reportMessage = reportMessage;
+		this.banUser = banUser;
+		this.userToBan = userToBan;
+		this.banMessage = banMessage;
+		this.banReason = banReason;
+		this.banNote = banNote;
+		this.unbanUser = unbanUser;
+		this.userToUnban = userToUnban;
+	}
 	/**
 	 * Creates a new response with no link flair
 	 * 
@@ -134,5 +216,65 @@ public class SummonResponse {
 	 */
 	public List<PMResponse> getPMResponses(){
 		return pmResponses;
+	}
+	
+	/**
+	 * @return if we should ban a user
+	 * @see #getUsernameToBan()
+	 * @see #getBanMessage()
+	 * @see #getBanReason()
+	 * @see #getBanNote()
+	 */
+	public boolean shouldBanUser() {
+		return banUser;
+	}
+	
+	/**
+	 * @return the username to ban, if shouldBanUser
+	 * @see #shouldBanUser()
+	 */
+	public String getUsernameToBan() {
+		return userToBan;
+	}
+	
+	/**
+	 * @return the message to tell the user we're banning, if shouldBanUser
+	 * @see #shouldBanUser()
+	 */
+	public String getBanMessage() {
+		return banMessage;
+	}
+	
+	/**
+	 * @return the reason we're banning the user, if shouldBanUser
+	 * @see #shouldBanUser()
+	 */
+	public String getBanReason() {
+		return banReason;
+	}
+	
+	/**
+	 * @return the note to moderators if we're banning usernameToBan, if shouldBanUser
+	 * @see #shouldBanUser()
+	 * @see #getUsernameToBan()
+	 */
+	public String getBanNote() {
+		return banNote;
+	}
+	
+	/**
+	 * @return if we should unban a user
+	 * @see #getUsernameToUnban()
+	 */
+	public boolean shouldUnbanUser() {
+		return unbanUser;
+	}
+	
+	/**
+	 * @return the user to unban, if shouldUnbanUser
+	 * @see #shouldUnbanUser()
+	 */
+	public String getUsernameToUnban() {
+		return userToUnban;
 	}
 }

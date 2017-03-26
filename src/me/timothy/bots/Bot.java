@@ -192,5 +192,22 @@ public class Bot {
 	public User getUser() {
 		return user;
 	}
+	
+	/**
+	 * Gets the subreddit that this bot is monitoring.
+	 * @return The subreddit this bot is monitoring
+	 */
+	public String getSubreddit() {
+		return subreddit;
+	}
+	
+	/**
+	 * Return the actual list of subreddits this bot is monitoring,
+	 * if it is monitoring multiple and combining them via +
+	 * @return subreddits this bot monitors
+	 */
+	public String[] getSubreddits() {
+		return subreddit.split("\\+");
+	}
 }
 

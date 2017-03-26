@@ -12,12 +12,14 @@ import me.timothy.bots.summon.SummonResponse;
 import me.timothy.bots.summon.SummonResponse.ResponseType;
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.User;
+import me.timothy.jreddit.info.BannedUsersListing;
 import me.timothy.jreddit.info.Comment;
 import me.timothy.jreddit.info.Errorable;
 import me.timothy.jreddit.info.Link;
 import me.timothy.jreddit.info.Listing;
 import me.timothy.jreddit.info.LoginResponse;
 import me.timothy.jreddit.info.Message;
+import me.timothy.jreddit.info.ModeratorListing;
 import me.timothy.jreddit.info.Thing;
 
 import org.apache.logging.log4j.Level;
@@ -212,9 +214,9 @@ public class BotDriver implements Runnable {
 				logger.trace(String.format("Skipping %s because the database contains that fullname", comment.fullname()));
 			return false;
 		}
-		if(config.getList("banned").contains(comment.author().toLowerCase())) {
+		if(!canInteractWithUsFast(comment.author())) {
 			if(debug)
-				logger.trace(String.format("Skipping %s because %s is banned", comment.fullname(), comment.author()));
+				logger.trace(String.format("Skipping %s because %s is not allowed to interact with us (fast)", comment.fullname(), comment.author()));
 			return false;
 		}
 		
@@ -226,8 +228,27 @@ public class BotDriver implements Runnable {
 
 		database.addFullname(comment.fullname());
 		boolean hadResponse = false;
+		boolean checkedCanInteractWith = false;
+		
 		SummonResponse response;
 		for(CommentSummon summon : commentSummons) {
+			if(!summon.mightInteractWith(comment, database, config)) {
+				if(debug)
+					logger.printf(Level.TRACE, "%s specified it will not interact with %s", summon.getClass().getCanonicalName(), comment.fullname());
+				continue;
+			}
+			
+			if(!checkedCanInteractWith) {
+				checkedCanInteractWith = true;
+				
+				if(!canInteractWithUsFull(comment.author()))
+				{
+					if(debug)
+						logger.trace(String.format("Skipping %s because %s is not allowed to interact with us (full)", comment.fullname(), comment.author()));
+					return false;
+				}
+			}
+			
 			response = null;
 			try {
 				response = summon.handleComment(comment, database, config);
@@ -255,6 +276,17 @@ public class BotDriver implements Runnable {
 					
 					if(response.getReportMessage() != null) {
 						handleReport(comment.fullname(), response.getReportMessage());
+						sleepFor(BRIEF_PAUSE_MS);
+					}
+					
+					if(response.shouldBanUser())
+					{
+						handleBanUser(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+						sleepFor(BRIEF_PAUSE_MS);
+					}
+					
+					if(response.shouldUnbanUser()) {
+						handleUnbanUser(response.getUsernameToUnban());
 						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
@@ -301,9 +333,23 @@ public class BotDriver implements Runnable {
 		if(database.containsFullname(submission.fullname()))
 			return;
 		database.addFullname(submission.fullname());
+		
+		if(!canInteractWithUsFast(submission.author()))
+			return;
 
+		boolean checkedInteractWithUsFull = false;
 		SummonResponse response;
 		for(LinkSummon summon : submissionSummons) {
+			if(!summon.mightInteractWith(submission, database, config))
+				continue;
+			
+			if(!checkedInteractWithUsFull) {
+				checkedInteractWithUsFull = true;
+				
+				if(!canInteractWithUsFull(submission.author()))
+					return;
+			}
+			
 			response = null;
 			try {
 				response = summon.handleLink(submission, database, config);
@@ -320,6 +366,17 @@ public class BotDriver implements Runnable {
 				
 				if(response.getReportMessage() != null) {
 					handleReport(submission.fullname(), response.getReportMessage());
+					sleepFor(BRIEF_PAUSE_MS);
+				}
+				
+				if(response.shouldBanUser())
+				{
+					handleBanUser(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+					sleepFor(BRIEF_PAUSE_MS);
+				}
+				
+				if(response.shouldUnbanUser()) {
+					handleUnbanUser(response.getUsernameToUnban());
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
@@ -362,6 +419,13 @@ public class BotDriver implements Runnable {
 				return;
 			}
 			database.addFullname(mess.fullname());
+			
+			if(!canInteractWithUsFull(mess.author()))
+			{
+				logger.trace("Skipping message " + mess.fullname() + " since " + mess.author() + " can't interact with us");
+				return;
+			}
+			
 			SummonResponse response;
 			for(PMSummon summon : pmSummons) {
 				response = null;
@@ -521,6 +585,11 @@ public class BotDriver implements Runnable {
 		}.run();
 	}
 	
+	/**
+	 * Reports the fullname with the specified message
+	 * @param thingFullname the fullname of the thing to report
+	 * @param reportMessage the message to report the thing with
+	 */
 	protected void handleReport(final String thingFullname, final String reportMessage) {
 		new Retryable<Boolean>("handleReport", maybeLoginAgainRunnable) {
 
@@ -532,6 +601,120 @@ public class BotDriver implements Runnable {
 			
 		}.run();
 	}
+	
+	/**
+	 * Bans the specified user from the specified subredit IF the user is not already banned
+	 * and not a moderator
+	 * 
+	 * @param userToBan the user to ban
+	 * @param banMessage the message to pass to the user
+	 * @param banReason the predefined string constants (in the subreddit options) for the "reason".
+	 * @param banNote the note to other moderators, less than 100 characters. Will be prefixed with bot username 
+	 * followed by a hypen, which is included in max char count.
+	 */
+	protected void handleBanUser(final String userToBan, final String banMessage, final String banReason, final String banNote)
+	{
+		if(userToBan == null || banMessage == null || banReason == null || banNote == null)
+			throw new IllegalArgumentException(String.format("userToBan=%s, banMessage=%s, banReason=%s, banNote=%s something is null", userToBan, banMessage, banReason, banNote));
+		
+		if(userToBan.equalsIgnoreCase(config.getString("user.username")))
+			return;
+		
+		String[] subreddits = bot.getSubreddits();
+		
+		for(final String subreddit : subreddits) {
+			new Retryable<Boolean>("handleBan - " + userToBan + " on /r/" + subreddit, maybeLoginAgainRunnable) {
+				@Override
+				protected Boolean runImpl() throws Exception {
+					BannedUsersListing banListing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToBan, bot.getUser());
+					if(banListing != null && banListing.numChildren() > 0)
+						return Boolean.TRUE; // already banned
+					
+					sleepFor(BRIEF_PAUSE_MS);
+					
+					ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, userToBan, bot.getUser());
+					if(modListing != null && modListing.numChildren() > 0)
+						return Boolean.TRUE; // never attempt to ban moderators
+					
+					RedditUtils.banFromSubreddit(subreddit, userToBan, banMessage, banReason, config.getString("user.username").toLowerCase() + "-" + banNote, bot.getUser());
+					
+					sleepFor(BRIEF_PAUSE_MS);
+					
+					return Boolean.TRUE;
+				}
+			}.run();
+		}
+	}
+	
+	/**
+	 * Unbans the specified user from /r/borrow IF the user is banned and the ban note
+	 * includes the bot username as the first string, in all lowercase, followed by a
+	 * hyphen
+	 * 
+	 * @param userToUnban the username to unban
+	 */
+	protected void handleUnbanUser(final String userToUnban)
+	{
+		String[] subreddits = bot.getSubreddits();
+		
+		for(final String subreddit : subreddits) {
+			new Retryable<Boolean>("handleUnban - " + userToUnban + " on /r/" + subreddit, maybeLoginAgainRunnable) {
+				@Override
+				protected Boolean runImpl() throws Exception {
+					BannedUsersListing listing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToUnban, bot.getUser());
+					if(listing == null || listing.numChildren() == 0)
+						return Boolean.TRUE; // not banned
+					
+					sleepFor(BRIEF_PAUSE_MS);
+					
+					String banNote = listing.getBannedUserInfo(0).note();
+
+					if(!banNote.startsWith(config.getString("user.username").toLowerCase() + "-"))
+						return Boolean.TRUE; // we didn't ban with handleBanUser on this user for this subreddit
+
+					RedditUtils.unbanFromSubreddit(subreddit, userToUnban, bot.getUser());
+					
+					sleepFor(BRIEF_PAUSE_MS);
+					
+					return Boolean.TRUE;
+				}
+			}.run();
+		}
+	}
+	
+	/**
+	 * Determines if the specified username is allowed to interact with us.
+	 * This should be a fairly fast check as it will be called prior to 
+	 * checking if summons match, and may be incomplete. canInteractWithUsFull
+	 * will be called after checking if at least one summon matches but 
+	 * before applying that summon.
+	 * 
+	 * @param username
+	 * @return
+	 */
+	protected boolean canInteractWithUsFast(final String username)
+	{
+		if(config.getList("banned").contains(username.toLowerCase()))
+			return false;
+		
+		return true;
+	}
+	
+	/**
+	 * This is the full scan to check if a specified username is allowed
+	 * to interact with us.
+	 * 
+	 * @param username the username
+	 * @return true if it can interact, false otherwise
+	 */
+	protected boolean canInteractWithUsFull(final String username)
+	{
+		if(!canInteractWithUsFast(username))
+			return false;
+		
+		return true;
+	}
+	
 	
 	/**
 	 * Sleeps for the specified time in milliseconds, as if by

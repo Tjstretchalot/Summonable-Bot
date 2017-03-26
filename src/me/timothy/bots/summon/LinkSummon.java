@@ -11,7 +11,19 @@ import me.timothy.jreddit.info.Link;
  */
 public interface LinkSummon extends Summon {
 	/**
-	 * Handles the link 
+	 * Determines if the specified link is a potential candidate for this summon to
+	 * interact with.
+	 * 
+	 * @param link the link
+	 * @param db the database
+	 * @param config the config
+	 * @return if we might interact with the link
+	 */
+	public boolean mightInteractWith(Link link, Database db, FileConfiguration config);
+	
+	/**
+	 * Handles the link, may assume mightInteractWith is true
+	 * 
 	 * @param link the link to handle
 	 * @param db the database to modify
 	 * @param config the configuration options to use

@@ -9,8 +9,21 @@ import me.timothy.jreddit.info.Comment;
  * @author Timothy
  */
 public interface CommentSummon extends Summon {
+	
 	/**
-	 * Handles the comment 
+	 * This should do nothing except fast checks to verify this is a potential candidate
+	 * for this comment summon.
+	 * 
+	 * @param comment the comment
+	 * @param db the database
+	 * @param config file configuration
+	 * @return if this comment is a potential candidate for a summon response
+	 */
+	public boolean mightInteractWith(Comment comment, Database db, FileConfiguration config);
+	
+	/**
+	 * Handles the comment. May assume mightInteractWith returned true.
+	 * 
 	 * @param comment the comment to handle
 	 * @param db the database to modify
 	 * @param config the configuration options to use
