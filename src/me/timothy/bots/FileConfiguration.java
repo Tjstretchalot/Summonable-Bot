@@ -27,7 +27,7 @@ public class FileConfiguration {
 	private Logger logger;
 	
 	/** The folder */
-	private Path folder;
+	protected Path folder;
 	
 	private Map<String, List<String>> lists;
 	private Map<String, String> strings;

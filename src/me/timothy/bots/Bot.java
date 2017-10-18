@@ -202,6 +202,14 @@ public class Bot {
 	}
 	
 	/**
+	 * Update the subreddit that bot is monitoring.
+	 * @param newSubreddit new subreddit to monitor
+	 */
+	public void setSubreddit(String newSubreddit) {
+		subreddit = newSubreddit;
+	}
+	
+	/**
 	 * Return the actual list of subreddits this bot is monitoring,
 	 * if it is monitoring multiple and combining them via +
 	 * @return subreddits this bot monitors

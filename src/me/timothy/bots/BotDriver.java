@@ -245,6 +245,7 @@ public class BotDriver implements Runnable {
 				{
 					if(debug)
 						logger.trace(String.format("Skipping %s because %s is not allowed to interact with us (full)", comment.fullname(), comment.author()));
+					onFailedInteractCheck(comment);
 					return false;
 				}
 			}
@@ -346,8 +347,10 @@ public class BotDriver implements Runnable {
 			if(!checkedInteractWithUsFull) {
 				checkedInteractWithUsFull = true;
 				
-				if(!canInteractWithUsFull(submission.author()))
+				if(!canInteractWithUsFull(submission.author())) {
+					onFailedInteractCheck(submission);
 					return;
+				}
 			}
 			
 			response = null;
@@ -423,6 +426,7 @@ public class BotDriver implements Runnable {
 			if(!canInteractWithUsFull(mess.author()))
 			{
 				logger.trace("Skipping message " + mess.fullname() + " since " + mess.author() + " can't interact with us");
+				onFailedInteractCheck(m);
 				return;
 			}
 			
@@ -746,6 +750,14 @@ public class BotDriver implements Runnable {
 		return true;
 	}
 	
+	/**
+	 * Called when a thing was found not to be able to interact with us.
+	 * 
+	 * @param thing the thing that could not interact with us
+	 */
+	protected void onFailedInteractCheck(final Thing thing)
+	{
+	}
 	
 	/**
 	 * Sleeps for the specified time in milliseconds, as if by
