@@ -282,7 +282,7 @@ public class BotDriver implements Runnable {
 					
 					if(response.shouldBanUser())
 					{
-						handleBanUser(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+						handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
 						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
@@ -374,7 +374,7 @@ public class BotDriver implements Runnable {
 				
 				if(response.shouldBanUser())
 				{
-					handleBanUser(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+					handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
@@ -615,7 +615,7 @@ public class BotDriver implements Runnable {
 	 * @param banReason the predefined string constants (in the subreddit options) for the "reason".
 	 * @param banNote the note to other moderators, less than 100 characters.
 	 */
-	protected void handleBanUser(final String userToBan, final String banMessage, final String banReason, final String banNote)
+	protected void handleBanUserOnAllSubreddits(final String userToBan, final String banMessage, final String banReason, final String banNote)
 	{
 		if(userToBan == null || banMessage == null || banReason == null || banNote == null)
 			throw new IllegalArgumentException(String.format("userToBan=%s, banMessage=%s, banReason=%s, banNote=%s something is null", userToBan, banMessage, banReason, banNote));
@@ -627,30 +627,7 @@ public class BotDriver implements Runnable {
 		
 		boolean failure = false;
 		for(final String subreddit : subreddits) {
-			Boolean result = new Retryable<Boolean>("handleBan - " + userToBan + " on /r/" + subreddit, maybeLoginAgainRunnable) {
-				@Override
-				protected Boolean runImpl() throws Exception {
-					BannedUsersListing banListing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToBan, bot.getUser());
-					if(banListing != null && banListing.numChildren() > 0) {
-						logger.info(String.format("Failed to ban %s from %s - he was already banned there", userToBan, subreddit));
-						return Boolean.FALSE; // already banned
-					}
-					
-					sleepFor(BRIEF_PAUSE_MS);
-					
-					ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, userToBan, bot.getUser());
-					if(modListing != null && modListing.numChildren() > 0) {
-						logger.info(String.format("Failed to ban %s from %s - he is a moderator there", userToBan, subreddit));
-						return Boolean.FALSE; // never attempt to ban moderators
-					}
-					
-					RedditUtils.banFromSubreddit(subreddit, userToBan, banMessage, banReason, banNote, bot.getUser());
-					logger.info(String.format("Banned %s from %s - banMessage=%s, banReason=%s, banNote=%s", userToBan, subreddit, banMessage, banReason, banNote));
-					sleepFor(BRIEF_PAUSE_MS);
-					
-					return Boolean.TRUE;
-				}
-			}.run();
+			Boolean result = handleBanUser(subreddit, userToBan, banMessage, banReason, banNote);
 			
 			if(result != Boolean.TRUE)
 				failure = true;
@@ -659,6 +636,45 @@ public class BotDriver implements Runnable {
 		if(!failure) {
 			onSuccessfullyBannedUser(userToBan);
 		}
+	}
+	
+	/**
+	 * Bans userToBan from the specified subreddit
+	 * 
+	 * @param subreddit subreddit to ban on
+	 * @param userToBan user to ban
+	 * @param banMessage the message given to the user
+	 * @param banReason the reason (string 'other')
+	 * @param banNote the note to moderators
+	 * @return Boolean.TRUE if ban succeeded, Boolean.FALSE if ban will never succeed, null if we tried
+	 * too many times (like, every request in the last 24 hours has failed)
+	 */
+	protected Boolean handleBanUser(final String subreddit, final String userToBan, final String banMessage, final String banReason, final String banNote)
+	{
+		return new Retryable<Boolean>("handleBan - " + userToBan + " on /r/" + subreddit, maybeLoginAgainRunnable) {
+			@Override
+			protected Boolean runImpl() throws Exception {
+				BannedUsersListing banListing = RedditUtils.getBannedUsersForSubredditByName(subreddit, userToBan, bot.getUser());
+				if(banListing != null && banListing.numChildren() > 0) {
+					logger.info(String.format("Failed to ban %s from %s - he was already banned there", userToBan, subreddit));
+					return Boolean.FALSE; // already banned
+				}
+				
+				sleepFor(BRIEF_PAUSE_MS);
+				
+				ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, userToBan, bot.getUser());
+				if(modListing != null && modListing.numChildren() > 0) {
+					logger.info(String.format("Failed to ban %s from %s - he is a moderator there", userToBan, subreddit));
+					return Boolean.FALSE; // never attempt to ban moderators
+				}
+				
+				RedditUtils.banFromSubreddit(subreddit, userToBan, banMessage, banReason, banNote, bot.getUser());
+				logger.info(String.format("Banned %s from %s - banMessage=%s, banReason=%s, banNote=%s", userToBan, subreddit, banMessage, banReason, banNote));
+				sleepFor(BRIEF_PAUSE_MS);
+				
+				return Boolean.TRUE;
+			}
+		}.run();
 	}
 	
 	/**
