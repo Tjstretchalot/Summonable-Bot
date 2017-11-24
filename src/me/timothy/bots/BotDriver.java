@@ -423,6 +423,11 @@ public class BotDriver implements Runnable {
 			}
 			database.addFullname(mess.fullname());
 			
+			if(mess.author() == null) {
+				logger.trace("That message was sent with a null author so ignoring it");
+				return;
+			}
+			
 			if(!canInteractWithUsFull(mess.author()))
 			{
 				logger.trace("Skipping message " + mess.fullname() + " since " + mess.author() + " can't interact with us");
@@ -860,9 +865,11 @@ public class BotDriver implements Runnable {
 	 * @param user the user to send the message to
 	 * @param title the title of the message
 	 * @param message the text of the message
+	 * @return NULL if we received too many errors, true if we 
+	 * successfully sent a message, false if the request is not valid
 	 */
-	protected void sendMessage(final String to, final String title, final String message) {
-		new Retryable<Boolean>("Send PM", maybeLoginAgainRunnable) {
+	protected Boolean sendMessage(final String to, final String title, final String message) {
+		return new Retryable<Boolean>("Send PM", maybeLoginAgainRunnable) {
 
 			@Override
 			protected Boolean runImpl() throws Exception {
@@ -870,6 +877,7 @@ public class BotDriver implements Runnable {
 				List<?> errorsList = errors.getErrors();
 				if(errorsList != null && !errorsList.isEmpty()) {
 					logger.printf(Level.WARN, "Failed to send (to=%s, title=%s, message=%s): %s", to, title, message, errorsList.toString());
+					return false;
 				}
 				return true;
 			}
