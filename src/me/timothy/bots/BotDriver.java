@@ -148,6 +148,7 @@ public class BotDriver implements Runnable {
 	 */
 	protected void maybeLoginAgain()
 	{
+		logger.trace("Considering logging in again");
 		User user = bot.getUser();
 		LoginResponse loginResponse = user.getLoginResponse();
 		boolean shouldLogin = false;
@@ -163,12 +164,14 @@ public class BotDriver implements Runnable {
 			
 			long timeUntilExpires = timeInMillisThatExpires - now;
 			
+			logger.trace("Our code expires in " + timeUntilExpires + " ms");
 			if(timeUntilExpires < 1000 * 60 * 5) { // 5 minutes
 				shouldLogin = true;
 			}
 		}
 		
 		if(shouldLogin) {
+			logger.trace("Attempting to refresh login code");
 			user.setLoginResponse(null);
 			sleepFor(BRIEF_PAUSE_MS);
 			new Retryable<Boolean>("Refresh login token") {
@@ -181,6 +184,7 @@ public class BotDriver implements Runnable {
 					return Boolean.TRUE;
 				}
 			}.run();
+			logger.trace("Worked.");
 			sleepFor(BRIEF_PAUSE_MS);
 		}
 	}
@@ -529,6 +533,11 @@ public class BotDriver implements Runnable {
 	 * @see me.timothy.bots.Retryable
 	 */
 	protected void handleReply(final Thing replyable, final String response) {
+		if(response == null) {
+			logger.trace("Ignoring empty response");
+			return;
+		}
+		
 		new Retryable<Boolean>("handleReply", maybeLoginAgainRunnable) {
 
 			@Override

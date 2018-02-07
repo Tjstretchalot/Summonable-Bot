@@ -108,6 +108,7 @@ public abstract class Retryable<T> {
 				result = runImpl();
 			} catch (Exception e) {
 				e.printStackTrace();
+				logger.catching(e);
 				for(short s : params) {
 					if(s == FAIL_ON_EXCEPTION)
 						return null;
