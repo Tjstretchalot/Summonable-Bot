@@ -61,6 +61,8 @@ public class ResponseInfoFactory {
 				String username = param.toString();
 				if(username.startsWith("/u/"))
 					username = username.substring(3);
+				else if(username.startsWith("u/"))
+					username = username.substring(2);
 				result.addTemporaryString(key, username);
 			}else if(key.startsWith("money")) {
 				result.addTemporaryObject(key, new MoneyFormattableObject(BotUtils.parseDollarAmount(param.toString())));
