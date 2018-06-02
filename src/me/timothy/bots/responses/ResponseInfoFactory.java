@@ -73,6 +73,11 @@ public class ResponseInfoFactory {
 
 	public static ResponseInfo getResponseInfo(String format, String message, Comment comment) {
 		ResponseInfo result = getResponseInfo(format, message);
+		addCommentDetails(result, comment);
+		return result;
+	}
+	
+	public static void addCommentDetails(ResponseInfo result, Comment comment) {
 		result.addTemporaryString("author", comment.author());
 		result.addTemporaryString("body", comment.body());
 		result.addTemporaryString("quotable_body", comment.body().replace("\n", "\n>"));
@@ -81,6 +86,5 @@ public class ResponseInfoFactory {
 			result.addTemporaryString("link_author", comment.linkAuthor());
 			result.addTemporaryString("link_url", comment.linkURL());
 		}
-		return result;
 	}
 }
