@@ -284,14 +284,14 @@ public class BotDriver implements Runnable {
 						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
-					if(response.shouldBanUser())
-					{
-						handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+					if(response.shouldUnbanUser()) {
+						handleUnbanUserOnAllSubreddits(response.getUsernameToUnban());
 						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
-					if(response.shouldUnbanUser()) {
-						handleUnbanUserOnAllSubreddits(response.getUsernameToUnban());
+					if(response.shouldBanUser())
+					{
+						handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
 						sleepFor(BRIEF_PAUSE_MS);
 					}
 					
@@ -376,14 +376,14 @@ public class BotDriver implements Runnable {
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
-				if(response.shouldBanUser())
-				{
-					handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
+				if(response.shouldUnbanUser()) {
+					handleUnbanUserOnAllSubreddits(response.getUsernameToUnban());
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
-				if(response.shouldUnbanUser()) {
-					handleUnbanUserOnAllSubreddits(response.getUsernameToUnban());
+				if(response.shouldBanUser())
+				{
+					handleBanUserOnAllSubreddits(response.getUsernameToBan(), response.getBanMessage(), response.getBanReason(), response.getBanNote());
 					sleepFor(BRIEF_PAUSE_MS);
 				}
 				
