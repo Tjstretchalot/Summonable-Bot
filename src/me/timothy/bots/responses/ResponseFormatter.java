@@ -1,5 +1,8 @@
 package me.timothy.bots.responses;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,5 +61,80 @@ public class ResponseFormatter {
 		}
 		response.append(format.substring(indexThatResponseIsUpToInFormat));
 		return response.toString();
+	}
+	
+	/**
+	 * Looks at the given format and verifies that it matches the 
+	 * @param format
+	 * @param expectedKeys
+	 * @return
+	 */
+	public static void verifyFormat(String format, String errorPrefix, ExpectedKey... expectedKeys) {
+		HashSet<String> keys = new HashSet<>();
+		for(ExpectedKey key : expectedKeys) {
+			keys.add(key.key);
+		}
+		
+		Matcher matcher = REPLACEMENT_PATTERN.matcher(format);
+		
+		List<String> additionalKeys = new ArrayList<>();
+		while(matcher.find()) {
+			String whatToReplace = matcher.group();
+			String keyToReplace = whatToReplace.substring(1, whatToReplace.length() - 1);
+			if(!keys.contains(keyToReplace)) {
+				additionalKeys.add(keyToReplace);
+			}
+		}
+		
+		if(additionalKeys.size() == 0)
+			return;
+		
+		StringBuilder errorFormatter = new StringBuilder(errorPrefix);
+		errorFormatter.append("Found invalid replacements: ");
+		for(int i = 0; i < additionalKeys.size(); i++) {
+			if(i != 0) {
+				errorFormatter.append(", ");
+			}
+			errorFormatter.append(additionalKeys.get(i));
+		}
+		
+		errorFormatter.append("; valid keys are: \n");
+		for(ExpectedKey key : expectedKeys) {
+			errorFormatter.append("  '").append(key.key).append("': ").append(key.description).append("\n");
+		}
+		
+		throw new AssertionError(errorFormatter.toString());
+	}
+	
+
+
+	/**
+	 * This is a simple tuple of key/value pairs. This is only used for verifying the format
+	 * if verifyFormat is called, for better error messages and generally more robust 
+	 * responses.
+	 * 
+	 * @author Timothy
+	 */
+	public static class ExpectedKey {
+		/** The key that we know that we will be able to handle */
+		public String key;
+		
+		/** The description for the key */
+		public String description;
+		
+		/**
+		 * Create a new expected key with the given key and description
+		 * @param key the key that you know you will have info for
+		 * @param description the description of this key, used for error messages
+		 */
+		public ExpectedKey(String key, String description) {
+			if(key.contains("<"))
+				throw new IllegalArgumentException("Illegal character in key '" + key + "': <");
+			if(key.contains(">"))
+				throw new IllegalArgumentException("Illegal character in key '" + key + "': >");
+			
+			this.key = key;
+			this.description = description;
+		}
 	}
 }

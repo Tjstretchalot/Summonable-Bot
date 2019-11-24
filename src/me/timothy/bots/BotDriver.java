@@ -3,6 +3,7 @@ package me.timothy.bots;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
+import java.util.Map.Entry;
 
 import me.timothy.bots.summon.CommentSummon;
 import me.timothy.bots.summon.LinkSummon;
@@ -26,7 +27,6 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-// TODO: Auto-generated Javadoc
 /**
  * The driver for the bot, based on summons. Uses bot-specific
  * logic for looping through the comments, submissions, and personal
@@ -67,7 +67,12 @@ public class BotDriver implements Runnable {
 	 *  @see BotDriver#maybeLoginAgain()
 	 */
 	protected Runnable maybeLoginAgainRunnable;
-
+	
+	/**
+	 * The prefix we use for fetching the user information. Defaults to "user."
+	 */
+	protected String userConfigPrefix;
+	
 	/**
 	 * Creates a bot driver based on the specified database, configuration info,
 	 * rest client, and bot.
@@ -98,6 +103,8 @@ public class BotDriver implements Runnable {
 				maybeLoginAgain();
 			}
 		};
+		
+		this.userConfigPrefix = "user.";
 	}
 
 	/**
@@ -150,7 +157,7 @@ public class BotDriver implements Runnable {
 	{
 		logger.trace("Considering logging in again");
 		User user = bot.getUser();
-		LoginResponse loginResponse = user.getLoginResponse();
+		LoginResponse loginResponse = user != null ? user.getLoginResponse() : null;
 		boolean shouldLogin = false;
 		shouldLogin = shouldLogin || loginResponse == null;
 		if(!shouldLogin) {
@@ -172,15 +179,18 @@ public class BotDriver implements Runnable {
 		
 		if(shouldLogin) {
 			logger.trace("Attempting to refresh login code");
-			user.setLoginResponse(null);
+			if(user != null) {
+				user.setLoginResponse(null);
+			}
+			
 			sleepFor(BRIEF_PAUSE_MS);
 			new Retryable<Boolean>("Refresh login token") {
 				@Override
 				protected Boolean runImpl() throws IOException, org.json.simple.parser.ParseException {
-					bot.loginReddit(config.getProperty("user.username"),
-							config.getProperty("user.password"),
-							config.getProperty("user.appClientID"),
-							config.getProperty("user.appClientSecret"));
+					bot.loginReddit(config.getProperty(userConfigPrefix + "username"),
+							config.getProperty(userConfigPrefix + "password"),
+							config.getProperty(userConfigPrefix + "appClientID"),
+							config.getProperty(userConfigPrefix + "appClientSecret"));
 					return Boolean.TRUE;
 				}
 			}.run();
@@ -224,7 +234,7 @@ public class BotDriver implements Runnable {
 			return false;
 		}
 		
-		if(comment.author().equalsIgnoreCase(config.getProperty("user.username"))) {
+		if(comment.author().equalsIgnoreCase(config.getProperty(userConfigPrefix + "username"))) {
 			if(debug)
 				logger.trace(String.format("Skipping %s because thats my comment", comment.fullname()));
 			return false;
@@ -296,6 +306,13 @@ public class BotDriver implements Runnable {
 					}
 					
 					handlePMResponses(response);
+					
+					for (Entry<String, List<Object>> kvp : response.getSpecialHandlers().entrySet()) {
+						String key = kvp.getKey();
+						for(Object val : kvp.getValue()) {
+							handleSpecial(key, val);
+						}
+					}
 				}
 			}else if(debug) {
 				logger.printf(Level.TRACE, "%s gave no response to %s", summon.getClass().getCanonicalName(), comment.fullname());
@@ -388,6 +405,13 @@ public class BotDriver implements Runnable {
 				}
 				
 				handlePMResponses(response);
+
+				for (Entry<String, List<Object>> kvp : response.getSpecialHandlers().entrySet()) {
+					String key = kvp.getKey();
+					for(Object val : kvp.getValue()) {
+						handleSpecial(key, val);
+					}
+				}
 			}
 		}
 	}
@@ -454,6 +478,13 @@ public class BotDriver implements Runnable {
 					sleepFor(BRIEF_PAUSE_MS);
 					
 					handlePMResponses(response);
+
+					for (Entry<String, List<Object>> kvp : response.getSpecialHandlers().entrySet()) {
+						String key = kvp.getKey();
+						for(Object val : kvp.getValue()) {
+							handleSpecial(key, val);
+						}
+					}
 				}
 			}
 		}
@@ -499,10 +530,10 @@ public class BotDriver implements Runnable {
 	protected void login() {
 		boolean success = false;
 		try {
-			success = bot.loginReddit(config.getProperty("user.username"),
-					config.getProperty("user.password"),
-					config.getProperty("user.appClientID"),
-					config.getProperty("user.appClientSecret"));
+			success = bot.loginReddit(config.getProperty(userConfigPrefix + "username"),
+					config.getProperty(userConfigPrefix + "password"),
+					config.getProperty(userConfigPrefix + "appClientID"),
+					config.getProperty(userConfigPrefix + "appClientSecret"));
 		} catch (IOException | org.json.simple.parser.ParseException e) {
 			e.printStackTrace();
 		}
@@ -634,7 +665,7 @@ public class BotDriver implements Runnable {
 		if(userToBan == null || banMessage == null || banReason == null || banNote == null)
 			throw new IllegalArgumentException(String.format("userToBan=%s, banMessage=%s, banReason=%s, banNote=%s something is null", userToBan, banMessage, banReason, banNote));
 		
-		if(userToBan.equalsIgnoreCase(config.getProperty("user.username")))
+		if(userToBan.equalsIgnoreCase(config.getProperty(userConfigPrefix + "username")))
 			return;
 		
 		String[] subreddits = bot.getSubreddits();
@@ -793,6 +824,17 @@ public class BotDriver implements Runnable {
 	}
 	
 	/**
+	 * Handle the given special response. This should error if it doesn't recognize the special
+	 * key.
+	 * 
+	 * @param key the key which indicates how this special response should be handled
+	 * @param val information surrounding the response that depends on the key
+	 */
+	protected void handleSpecial(final String key, final Object val) {
+		throw new IllegalArgumentException(key);
+	}
+	
+	/**
 	 * Determines if the specified username is allowed to interact with us.
 	 * This should be a fairly fast check as it will be called prior to 
 	 * checking if summons match, and may be incomplete. canInteractWithUsFull
@@ -889,6 +931,33 @@ public class BotDriver implements Runnable {
 					return false;
 				}
 				return true;
+			}
+
+		}.run();
+	}
+	
+	/**
+	 * Submits a self post to the given subreddit, using exponential back-off
+	 * 
+	 * @param subreddit the subreddit to send the message to
+	 * @param title the title of the message
+	 * @param message the message to send
+	 * @return NULL if we received too many errors, true if we successfully posted, false if the request is not valid
+	 */
+	protected Boolean submitSelf(final String subreddit, final String title, final String message) {
+		return new Retryable<Boolean>("Submit Self", maybeLoginAgainRunnable) {
+
+			@Override
+			protected Boolean runImpl() throws Exception {
+				Boolean botRes = bot.submitSelf(subreddit, title, message);
+				if(botRes == Boolean.FALSE) {
+					return null;
+				}else if(botRes == Boolean.TRUE) {
+					return true;
+				}else {
+					logger.printf(Level.WARN, "Failed to post on /r/%s for some permanent reason (am I not an approved submitter there?)", subreddit);
+					return false;
+				}
 			}
 
 		}.run();

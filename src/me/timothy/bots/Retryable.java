@@ -128,6 +128,7 @@ public abstract class Retryable<T> {
 			try {
 				Thread.sleep(sleepTime);
 			}catch(InterruptedException ex) {
+				logger.throwing(ex);
 				throw new RuntimeException(ex);
 			}
 		}while(true);

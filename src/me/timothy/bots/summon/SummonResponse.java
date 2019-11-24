@@ -1,5 +1,6 @@
 package me.timothy.bots.summon;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -98,6 +99,12 @@ public class SummonResponse {
 	private String userToUnban;
 	
 	/**
+	 * A collection of special handlers which will be passed to BotDriver#handleSpecial(key, val).
+	 * Since we may use a single handler multiple times, the keys are lists
+	 */
+	private HashMap<String, List<Object>> specialHandlers;
+	
+	/**
 	 * Creates a new response
 	 * 
 	 * @param responseType the response type
@@ -137,6 +144,7 @@ public class SummonResponse {
 		this.linkFlairTemplateId = linkFlairTemplateId;
 		this.pmResponses = pmResponses;
 		this.reportMessage = reportMessage;
+		this.specialHandlers = new HashMap<String, List<Object>>();
 	}
 	
 	/**
@@ -154,9 +162,11 @@ public class SummonResponse {
 	 * @param banNote The note to other moderators for why we banned the user
 	 * @param unbanUser If we should unban a user
 	 * @param userToUnban The user we should unban
+	 * @param specialHandlers Any special handler notification code (see BotDriver#handleSpecial)
 	 */
 	public SummonResponse(ResponseType responseType, String responseMessage, String linkFlairTemplateId, List<PMResponse> pmResponses, 
-			String reportMessage, boolean banUser, String userToBan, String banMessage, String banReason, String banNote, boolean unbanUser, String userToUnban)
+			String reportMessage, boolean banUser, String userToBan, String banMessage, String banReason, String banNote, boolean unbanUser, 
+			String userToUnban, HashMap<String, List<Object>> specialHandlers)
 	{
 		this.responseType = responseType;
 		this.responseMessage = responseMessage;
@@ -170,7 +180,9 @@ public class SummonResponse {
 		this.banNote = banNote;
 		this.unbanUser = unbanUser;
 		this.userToUnban = userToUnban;
+		this.specialHandlers = specialHandlers == null ? new HashMap<String, List<Object>>() : specialHandlers;
 	}
+	
 	/**
 	 * Creates a new response with no link flair
 	 * 
@@ -276,5 +288,20 @@ public class SummonResponse {
 	 */
 	public String getUsernameToUnban() {
 		return userToUnban;
+	}
+	
+	/**
+	 * This can be used to passed special handling code for summon responses. For example, suppose
+	 * one essential characteristic of a particular bot involves API calls to a backend. This can't
+	 * be handled like banning/unbanning which are general functions, but it also shouldn't occur
+	 * directly within the response processing (which should be fast and internal only). Thus
+	 * a special handler is used, where the key is shared and unique (i.e. CANVAS_API_CALL)
+	 * and the object is understood (ie., CanvasAPIResponse). We may use the same key multiple
+	 * times, hence the values are lists of objects for that key.
+	 * 
+	 * @return the special handling objects, never null
+	 */
+	public HashMap<String, List<Object>> getSpecialHandlers() {
+		return specialHandlers;
 	}
 }

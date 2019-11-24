@@ -164,6 +164,19 @@ public class Bot {
 	public Errorable sendPM(String to, String title, String message) throws IOException, ParseException {
 		return RedditUtils.sendPersonalMessage(user, to, title, message);
 	}
+	
+	/**
+	 * Submits a self-post to the given subreddit
+	 * @param subreddit the subreddit to post on
+	 * @param title the title of the post
+	 * @param body the body of the post
+	 * @throws IOException 
+	 * @throws ParseException
+	 * @return NULL if the request is bad, true if the request succeeded, false if the request failed for temporary reasons
+	 */
+	public Boolean submitSelf(String subreddit, String title, String body) throws IOException, ParseException {
+		return RedditUtils.submitSelf(user, subreddit, title, body);
+	}
 
 	/**
 	 * Marks the specified messages as read.
