@@ -96,7 +96,7 @@ public abstract class Retryable<T> {
 	}
 	
 	/**
-	 * Runs runImpl at most 10 times or until the result is non-null.
+	 * Runs runImpl until the result is non-null.
 	 * 
 	 * @return runImpl's non-null result upon success, null on failure
 	 */

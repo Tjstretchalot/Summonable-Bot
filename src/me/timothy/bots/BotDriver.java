@@ -11,6 +11,7 @@ import me.timothy.bots.summon.PMResponse;
 import me.timothy.bots.summon.PMSummon;
 import me.timothy.bots.summon.SummonResponse;
 import me.timothy.bots.summon.SummonResponse.ResponseType;
+import me.timothy.jreddit.HttpUnexpectedStatusCodeException;
 import me.timothy.jreddit.RedditUtils;
 import me.timothy.jreddit.User;
 import me.timothy.jreddit.info.BannedUsersListing;
@@ -745,9 +746,25 @@ public class BotDriver implements Runnable {
 
 			@Override
 			protected Boolean runImpl() throws Exception {
-				ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, user, bot.getUser());
-				sleepFor(BRIEF_PAUSE_MS);
-				return modListing != null && modListing.numChildren() > 0;
+				try {
+					ModeratorListing modListing = RedditUtils.getModeratorForSubredditByName(subreddit, user, bot.getUser());
+					sleepFor(BRIEF_PAUSE_MS);
+					return modListing != null && modListing.numChildren() > 0;
+				} catch (HttpUnexpectedStatusCodeException e) {
+					sleepFor(BRIEF_PAUSE_MS);
+					if (e.statusCode == 401) {
+						// We don't have permission to view the moderators list on that subreddit,
+						// likely because the subreddit is private. The only reasonable answer for
+						// the moderators of a private subreddit is nobody.
+						logger.info("Checking if %s is a mod on /r/%s - for our purposes they are not, since the subreddit is private", user, subreddit);
+						return false;
+					} else if (e.statusCode == 404) {
+						// subreddit doesn't exist or was permanently banned
+						logger.info("Checking if %s is a mod on /r/%s - for our purposes they are not, since the subreddit does not exist or has been banned", user, subreddit);
+						return false;
+					}
+					throw e;
+				}
 			}
 			
 		}.run();
